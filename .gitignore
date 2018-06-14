@@ -1,0 +1,10 @@
+# Private tokens and URLS
+config.json
+
+# ENV stuff
+bin/
+share/
+lib/
+
+# pip
+pip-selfcheck.json
