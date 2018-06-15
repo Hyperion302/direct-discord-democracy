@@ -26,7 +26,7 @@ action_storage = {
 		"kick" : lambda params,message : {
 			"author":message.author.id,
 			"action":params[0],
-			"target":sref_name(params[1]),
+			"target":params[1],
 			"name":params[2],
 			"long_name":params[3],
 			"votes":1,
@@ -117,8 +117,10 @@ async def deref_name(server,uid): #TODO: Do I need this to be ASYNC?
 
 def sref_name(server,name):
 	mem = server.get_member_named(name)
+	print(name)
+	print(mem)
 	if not mem:
-		raise InputError(name)
+		raise UserNotFoundError(name)
 	else:
 		return mem.id
 
@@ -133,9 +135,9 @@ async def on_ready():
 @client.event
 async def on_message(message):
 	if len(message.content) > 0 and message.content[0] == '.':
-		command_string = message.content[1:].lower()
+		command_string = message.content[1:]
 		if command_string.split(' ')[0] in commands:
-			command = command_string.split(' ')[0]
+			command = command_string.split(' ')[0].lower()
 			await call_command(command,command_string,message)
 
 async def call_command(command,command_string,message):
@@ -146,8 +148,8 @@ async def call_command(command,command_string,message):
 		try:
 			template = action_storage[user_params[0]](user_params,message)
 			docID = db.props.insert_one(template).inserted_id
-		except InputError:
-			await fmessage(message.channel,'An error has occured with your input')
+		except UserNotFoundError as e:
+			await fmessage(message.channel,'An error has occured with the name %s' % e.userQuery)
 		except:
 			await fmessage(message.channel,'An error has occured')
 		else:
@@ -167,8 +169,8 @@ async def call_command(command,command_string,message):
 					"Author: {1}\n"
 					"Name: {2}\n"
 					"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in docs])
-		except UserNotFoundError:
-			await fmessage(message.channel,"An error occured with retrieving the proposition's author")
+		except UserNotFoundError as e:
+			await fmessage(message.channel,"An error occured with retrieving the proposition's author: %s" % e.userQuery)
 		except:
 			await fmessage(message.channel,"An error occured")
 		else:
@@ -182,8 +184,8 @@ async def call_command(command,command_string,message):
 		doc = db.props.find_one({"_id":bson.objectid.ObjectId(user_params[0])}) #TODO: Query by name, not ID
 		try:
 			string = action_output_templates[doc['action']](doc,message.server)
-		except UserNotFoundError:
-			await fmessage(message.channel,"An error occured when processing the proposition")
+		except UserNotFoundError as e:
+			await fmessage(message.channel,"An error occured when processing %s" % e.userQuery)
 		except:
 			await fmessage(message.channel,"An error occured")
 		else:
@@ -226,8 +228,8 @@ async def call_command(command,command_string,message):
 					"Author: {1}\n"
 					"Name: {2}\n"
 					"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in docs])	
-		except UserNotFoundError:
-			await fmessage(message.channel,"An error occured while retrieving the proposition's author")
+		except UserNotFoundError as e:
+			await fmessage(message.channel,"An error occured while retrieving the proposition's author: %s" % e.userQuery)
 		except:
 			await fmessage(message.channel,"An error occured")
 		else:
