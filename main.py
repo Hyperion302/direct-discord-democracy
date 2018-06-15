@@ -26,7 +26,7 @@ action_storage = {
 		"kick" : lambda params,message : {
 			"author":message.author.id,
 			"action":params[0],
-			"target":params[1],
+			"target":sref_name(message.server,params[1]),
 			"name":params[2],
 			"long_name":params[3],
 			"votes":1,
@@ -38,8 +38,8 @@ action_storage = {
 		"ban" : lambda params,message : {
 			"author":message.author.id,
 			"action":params[1],
-			"target":params[1],
-			"duration":params[2],
+			"target":sref_name(message.server,params[1]),
+			"duration":int(params[2]),
 			"name":params[3],
 			"long_name":params[4],
 			"votes":1,
@@ -117,8 +117,6 @@ async def deref_name(server,uid): #TODO: Do I need this to be ASYNC?
 
 def sref_name(server,name):
 	mem = server.get_member_named(name)
-	print(name)
-	print(mem)
 	if not mem:
 		raise UserNotFoundError(name)
 	else:
