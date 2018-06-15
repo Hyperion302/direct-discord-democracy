@@ -20,6 +20,11 @@ class UserNotFoundError(Exception):
 		super().__init__("User not found")
 		self.userQuery = userQuery
 
+class DocNotFoundError(Exception):
+	def __init__(self, query):
+		super().__init__("Doc not found")
+		self.query = query
+
 commands = ['add','remove','list','find','status','vote','about','help']
 actions = ['kick','ban']
 action_storage = {
@@ -122,6 +127,14 @@ def sref_name(server,name):
 	else:
 		return mem.id
 
+def ref_doc(server,name):
+	print(name)
+	doc = db.props.find_one({"name":{"$regex":name}})
+	if not doc:
+		raise DocNotFoundError(name)
+	else:
+		return doc
+
 async def execute_action(channel,action_doc):
 	pass #TODO
 
@@ -179,7 +192,10 @@ async def call_command(command,command_string,message):
 	elif command == 'status':
 		# Print out verbose information
 
-		doc = db.props.find_one({"_id":bson.objectid.ObjectId(user_params[0])}) #TODO: Query by name, not ID
+		try:
+			doc = ref_doc(message.channel.server,user_params[0])
+		except DocNotFoundError as e:
+			await fmessage(message.channel,"An error occured when finding a proposition named %s" % e.query)
 		try:
 			string = action_output_templates[doc['action']](doc,message.server)
 		except UserNotFoundError as e:
@@ -192,26 +208,28 @@ async def call_command(command,command_string,message):
 		# 1. Update vote count
 		# 2. Add voter to list
 		# 3. Check vote threshold
-		
-		# Pymongo requires objID fields to be objectID objects.
-		obj_id = bson.objectid.ObjectId(user_params[0])
-		doc = db.props.find_one({"_id":obj_id}) #TODO: Query by name, not ID
-		# Save doc_id for next query
-		doc_id = doc['_id']
-		# Check to make sure user hasn't already voted
-		if message.author.id not in doc['voters']:
-			db.props.update_one({"_id":obj_id},{
-				"$inc":{"votes":1},
-				"$addToSet":{"voters":message.author.id}
-			})
-			await fmessage(message.channel,"Thanks for voting")
+		try:
+			doc = ref_doc(message.channel.server,user_params[0])
+			doc_id = doc['id']
+		except DocNotFoundError as e:
+			await fmessage(message.channel,"An error occured when finding a proposition named %s" % e.query)
+		except:
+			await fmessage(message.channel,"An error occured")
 		else:
-			await fmessage(message.channel,"You already voted!")
-		# Check vote threshold
-		doc = db.props.find_one({"_id":doc_id})
-		if doc['votes'] >= doc['threshold'] * message.channel.server.member_count:
-			await fmessage(message.channel,"Proposition #%s has been accepted, executing..." % (str(doc['id'])))
-			await execute_action(message.channel,doc)
+			# Check to make sure user hasn't already voted
+			if message.author.id not in doc['voters']:
+				db.props.update_one({"_id":obj_id},{
+					"$inc":{"votes":1},
+					"$addToSet":{"voters":message.author.id}
+				})
+				await fmessage(message.channel,"Successfully voted for %s" % doc['name'])
+			else:
+				await fmessage(message.channel,"You already voted!")
+			# Check vote threshold
+			doc = db.props.find_one({"_id":doc_id})
+			if doc['votes'] >= doc['threshold'] * message.channel.server.member_count:
+				await fmessage(message.channel,"Proposition #%s has been accepted, executing..." % (str(doc['id'])))
+				await execute_action(message.channel,doc)
 	elif command == 'help':
 		pass
 	elif command == 'about':
