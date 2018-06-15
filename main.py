@@ -5,6 +5,17 @@ import pymongo,bson
 
 
 #TODO: Add actual error messages
+class InputError(Exception):
+	def __init__(self, input_segment):
+		super().__init__("Something you said didn't make sense")
+		self.input_segment = input_segment
+
+class DatabaseError(Exception):
+	def __init__(self, error):
+		super().__init__("An error has occured")
+		self.input_segment = input_segment
+
+
 
 commands = ['add','remove','list','find','status','vote','about','help']
 actions = ['kick','ban']
@@ -101,6 +112,13 @@ async def deref_name(server,uid): #TODO: Do I need this to be ASYNC?
 	else:
 		return mem.name
 
+def sref_name(server,name):
+	mem = server.get_member_named(name)
+	if not mem:
+		raise InputException(name)
+	else:
+		return mem.id
+
 async execute_action(channel,action_doc):
 	pass #TODO
 
@@ -122,8 +140,15 @@ async def call_command(command,command_string,message):
 	user_params = ' '.join(command_string.split(' ')[1:]).split(':')
 	if command == 'add':
 		if user_params[0] not in actions: return
-		docID = db.props.insert_one(action_storage[user_params[0]](user_params,message)).inserted_id	
-		await fmessage(message.channel,'Successfully added proposition #%s' % (str(docID)))
+		try:
+			template = action_storage[user_params[0]](user_params,message)
+			docID = db.props.insert_one(template).inserted_id
+		except InputError:
+			await fmessage(message.channel,'An error has occured with your input')
+		except:
+			await fmessage(message.channel,'An error has occured')
+		else:
+			await fmessage(message.channel,'Successfully added proposition #%s' % (str(docID)))
 	elif command == 'remove':
 		pass
 	elif command == 'list':
