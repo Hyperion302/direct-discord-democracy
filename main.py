@@ -101,9 +101,15 @@ async def deref_name(server,uid): #TODO: Do I need this to be ASYNC?
 	else:
 		return mem.name
 
-async execute_action(channel,action_doc):
-	pass #TODO
-
+async def execute_action(channel,action_doc):
+	action = action_doc['action']
+	target = None
+	if action_doc['target']:
+		target = channel.server.get_member(action_doc['target'])
+	if action == kick:
+		client.kick(target)
+	else:
+		pass
 
 @client.event
 async def on_ready():
