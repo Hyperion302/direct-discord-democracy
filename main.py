@@ -12,10 +12,13 @@ class InputError(Exception):
 
 class DatabaseError(Exception):
 	def __init__(self, error):
-		super().__init__("An error has occured")
-		self.input_segment = input_segment
+		super().__init__("Could not read database")
+		self.error = error
 
-
+class UserNotFoundError(Exception):
+	def __init__(self, userQuery):
+		super().__init__("User not found")
+		self.userQuery = userQuery
 
 commands = ['add','remove','list','find','status','vote','about','help']
 actions = ['kick','ban']
@@ -23,7 +26,7 @@ action_storage = {
 		"kick" : lambda params,message : {
 			"author":message.author.id,
 			"action":params[0],
-			"target":params[1],
+			"target":sref_name(params[1]),
 			"name":params[2],
 			"long_name":params[3],
 			"votes":1,
@@ -101,25 +104,25 @@ async def fmessage(channel,content): #TODO: Handle 2000+ chars by breaking up in
 def sderef_name(server,uid):
 	mem = server.get_member(uid)
 	if not mem:
-		return "Unknown"
+		raise UserNotFoundError(uid)
 	else:
 		return mem.name
 
 async def deref_name(server,uid): #TODO: Do I need this to be ASYNC?
 	mem = server.get_member(uid)
 	if not mem:
-		return "Unknown"
+		raise UserNotFoundError(uid)
 	else:
 		return mem.name
 
 def sref_name(server,name):
 	mem = server.get_member_named(name)
 	if not mem:
-		raise InputException(name)
+		raise InputError(name)
 	else:
 		return mem.id
 
-async execute_action(channel,action_doc):
+async def execute_action(channel,action_doc):
 	pass #TODO
 
 
@@ -157,20 +160,34 @@ async def call_command(command,command_string,message):
 		# 3. Joins up the strings
 		# string = "--\n".join([action_output_templates[doc['action']](doc,message.server) for doc in db.props.find({"active":True,"server":message.server.id})])
 		# New: Simple output
-		string = "--\n".join([(
-				"Action: {0}\n"
-				"Author: {1}\n"
-				"Name: {2}\n"
-				"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in db.props.find({"active":True,"server":message.server.id})])
-		if(len(string) >= 2000):
-			await fmessage(message.channel,"Too many entries. You could try .find?")
+		try:
+			docs = [doc for doc in db.props.find({"active":True,"server":message.server.id})]
+			string = "--\n".join([(
+					"Action: {0}\n"
+					"Author: {1}\n"
+					"Name: {2}\n"
+					"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in docs])
+		except UserNotFoundError:
+			await fmessage(message.channel,"An error occured with retrieving the proposition's author")
+		except:
+			await fmessage(message.channel,"An error occured")
 		else:
-			await fmessage(message.channel,string)
+			if(len(string) >= 2000):
+				await fmessage(message.channel,"Too many entries. You could try .find?")
+			else:
+				await fmessage(message.channel,string)
 	elif command == 'status':
 		# Print out verbose information
 
 		doc = db.props.find_one({"_id":bson.objectid.ObjectId(user_params[0])}) #TODO: Query by name, not ID
-		await fmessage(message.channel,action_output_templates[doc['action']](doc,message.server))
+		try:
+			string = action_output_templates[doc['action']](doc,message.server)
+		except UserNotFoundError:
+			await fmessage(message.channel,"An error occured when processing the proposition")
+		except:
+			await fmessage(message.channel,"An error occured")
+		else:
+			await fmessage(message.channel,string)
 	elif command == 'vote':
 		# 1. Update vote count
 		# 2. Add voter to list
@@ -193,6 +210,7 @@ async def call_command(command,command_string,message):
 		# Check vote threshold
 		doc = db.props.find_one({"_id":doc_id})
 		if doc['votes'] >= doc['threshold'] * message.channel.server.member_count:
+			await fmessage(message.channel,"Proposition #%s has been accepted, executing..." % (str(doc['id'])))
 			await execute_action(message.channel,doc)
 	elif command == 'help':
 		pass
@@ -202,17 +220,22 @@ async def call_command(command,command_string,message):
 		# Query DB for docs of a specific name
 
 		docs = db.props.find({"name":{'$regex': user_params[0]}})
-		
-		string = "--\n".join([(
-				"Action: {0}\n"
-				"Author: {1}\n"
-				"Name: {2}\n"
-				"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in docs])	
-		if(len(string) >= 2000):
-			await fmessage(message.channel,"Too many entries for %s. Try narrowing your search" % user_params[0])
+		try:
+			string = "--\n".join([(
+					"Action: {0}\n"
+					"Author: {1}\n"
+					"Name: {2}\n"
+					"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in docs])	
+		except UserNotFoundError:
+			await fmessage(message.channel,"An error occured while retrieving the proposition's author")
+		except:
+			await fmessage(message.channel,"An error occured")
 		else:
-			await fmessage(message.channel,string)
-	else:
+			if(len(string) >= 2000):
+				await fmessage(message.channel,"Too many entries for %s. Try narrowing your search" % user_params[0])
+			else:
+				await fmessage(message.channel,string)
+	else: #Default case
 		pass
 
 print("Starting DDD with:\nToken: %s\nSrv: %s" % (config['token'],config['db_srv']))
