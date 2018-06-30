@@ -152,6 +152,24 @@ async def on_message(message):
 		if command_string.split(' ')[0] in commands:
 			command = command_string.split(' ')[0].lower()
 			await call_command(command,command_string,message)
+@client.event
+async def on_reaction_add(reaction,user):
+	message = reaction.message
+	# Add vote	
+	doc = db.props.find_one({"active":True,"server":message.server.id,"message_id":message.id})
+	# Check to make sure user hasn't already voted
+	if user.id not in doc['voters']:
+		db.props.update_one({"_id":doc['_id']},{
+			"$inc":{"votes":1},
+			"$addToSet":{"voters":user.id}
+		})
+	else:
+		pass
+	# Check vote threshold
+	doc = db.props.find_one({"_id":doc_id})
+	if doc['votes'] >= doc['threshold'] * message.channel.server.member_count:
+		await fmessage(message.channel,"Proposition #%s has been accepted, executing..." % (str(doc['id'])))
+		await execute_action(message.channel,doc)
 
 async def call_command(command,command_string,message):
 	# Split input by spaces, pull off command, stick back together, and add split by ':'
