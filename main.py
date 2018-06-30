@@ -31,6 +31,7 @@ action_storage = {
 		"kick" : lambda params,message : {
 			"author":message.author.id,
 			"action":params[0],
+			"message_id":message.id,
 			"target":sref_name(message.server,params[1]),
 			"name":params[2],
 			"long_name":params[3],
@@ -43,6 +44,7 @@ action_storage = {
 		"ban" : lambda params,message : {
 			"author":message.author.id,
 			"action":params[1],
+			"message_id":message.id
 			"target":sref_name(message.server,params[1]),
 			"duration":int(params[2]),
 			"name":params[3],
