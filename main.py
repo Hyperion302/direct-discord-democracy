@@ -1,3 +1,6 @@
+#TODO: Figure out why the bot can not receive reaction events from messages
+# that weren't received during the session
+#TODO: Add styled responses
 import discord
 import asyncio
 import json
@@ -64,7 +67,7 @@ action_output_templates = {
 		"ID: {3}\n"
 		"Author: {4}\n"
 		"Target: {5}\n"
-		"Votes {6}/{7}\n").format(
+		"Votes {5}/{7}\n").format(
 		doc['action'],
 		doc['name'],
 		doc['long_name'],
@@ -99,11 +102,30 @@ client = discord.Client()
 mongoclient = pymongo.MongoClient(config['db_srv'])
 db = mongoclient.ddd
 
-async def fmessage(channel,content): #TODO: Handle 2000+ chars by breaking up input string
-	padding = '='*round((len(content)-5)/2)
+async def error_message(channel,content): #TODO: Handle 2000+ chars by breaking up input string
+	#padding = '='*round((len(content)-5)/2)
 	#await client.send_message(channel,"\n```ini\n{0}[DDD]{0}\n{1}\n```".format(padding,content))
-	await client.send_message(channel,"```%s```" % (content))	
-
+	#await client.send_message(channel,"```%s```" % (content))
+	embed = discord.Embed(
+		type = "rich",
+		description = content,
+		color = discord.Colour.red()
+		)
+	await client.send_message(channel,embed=embed)
+async def neutral_message(channel,content): #TODO: See above
+	embed = discord.Embed(
+		type = "rich",
+		description = content,
+		color = discord.Colour.blue()
+		)
+	await client.send_message(channel,embed = embed)
+async def confirmation_message(channel,content): #TODO: See above
+	embed = discord.Embed(
+		type = "rich",
+		description = content,
+		color = discord.Colour.green()
+		)
+	await client.send_message(channel,embed = embed)
 
 def sderef_name(server,uid):
 	mem = server.get_member(uid)
@@ -155,8 +177,9 @@ async def on_reaction_add(reaction,user):
 	# Add vote	
 	doc = db.props.find_one({"active":True,"server":message.server.id,"message_id":message.id})
 	VoteEmoji = '\U0001F44C' #OK Hand sign
-	if reaction.emoji != VoteEmoji:
+	if not str(reaction.emoji).startswith(VoteEmoji):
 		return
+	print("A")
 	# Check to make sure user hasn't already voted
 	if user.id not in doc['voters']:
 		db.props.update_one({"_id":doc['_id']},{
@@ -168,7 +191,7 @@ async def on_reaction_add(reaction,user):
 	# Check vote threshold
 	doc = db.props.find_one({"_id":doc['_id']})
 	if doc['votes'] >= doc['threshold'] * message.channel.server.member_count:
-		await fmessage(message.channel,"Proposition #%s has been accepted, executing..." % (str(doc['id'])))
+		await confirmation_message(message.channel,"Proposition #%s has been accepted, executing..." % (str(doc['id'])))
 		await execute_action(message.channel,doc)
 
 async def call_command(command,command_string,message):
@@ -180,11 +203,11 @@ async def call_command(command,command_string,message):
 			template = action_storage[user_params[0]](user_params,message)
 			docID = db.props.insert_one(template).inserted_id
 		except UserNotFoundError as e:
-			await fmessage(message.channel,'An error has occured with the name %s' % e.userQuery)
+			await error_message(message.channel,'An error has occured with the name %s' % e.userQuery)
 		except:
-			await fmessage(message.channel,'An error has occured')
+			await error_message(message.channel,'An error has occured')
 		else:
-			await fmessage(message.channel,'Successfully added proposition #%s' % (str(docID)))
+			await confirmation_message(message.channel,'Successfully added proposition **#%s**' % (str(docID)))
 	elif command == 'remove':
 		pass
 	elif command == 'list':
@@ -201,29 +224,29 @@ async def call_command(command,command_string,message):
 					"Name: {2}\n"
 					"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in docs])
 		except UserNotFoundError as e:
-			await fmessage(message.channel,"An error occured with retrieving the proposition's author: %s" % e.userQuery)
+			await error_message(message.channel,"An error occured with retrieving the proposition's author: %s" % e.userQuery)
 		except:
-			await fmessage(message.channel,"An error occured")
+			await error_message(message.channel,"An error occured")
 		else:
 			if(len(string) >= 2000):
-				await fmessage(message.channel,"Too many entries. You could try .find?")
+				await error_message(message.channel,"Too many entries. You could try .find?")
 			else:
-				await fmessage(message.channel,string)
+				await neutral_message(message.channel,string)
 	elif command == 'status':
 		# Print out verbose information
 
 		try:
 			doc = ref_doc(message.channel.server,user_params[0])
 		except DocNotFoundError as e:
-			await fmessage(message.channel,"An error occured when finding a proposition named %s" % e.query)
+			await error_message(message.channel,"An error occured when finding a proposition named %s" % e.query)
 		try:
 			string = action_output_templates[doc['action']](doc,message.server)
 		except UserNotFoundError as e:
-			await fmessage(message.channel,"An error occured when processing %s" % e.userQuery)
+			await error_message(message.channel,"An error occured when processing %s" % e.userQuery)
 		except:
-			await fmessage(message.channel,"An error occured")
+			await error_message(message.channel,"An error occured")
 		else:
-			await fmessage(message.channel,string)
+			await neutral_message(message.channel,string)
 	elif command == 'help':
 		pass
 	elif command == 'about':
@@ -239,14 +262,14 @@ async def call_command(command,command_string,message):
 					"Name: {2}\n"
 					"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in docs])	
 		except UserNotFoundError as e:
-			await fmessage(message.channel,"An error occured while retrieving the proposition's author: %s" % e.userQuery)
+			await error_message(message.channel,"An error occured while retrieving the proposition's author: %s" % e.userQuery)
 		except:
-			await fmessage(message.channel,"An error occured")
+			await error_message(message.channel,"An error occured")
 		else:
 			if(len(string) >= 2000):
-				await fmessage(message.channel,"Too many entries for %s. Try narrowing your search" % user_params[0])
+				await error_message(message.channel,"Too many entries for %s. Try narrowing your search" % user_params[0])
 			else:
-				await fmessage(message.channel,string)
+				await neutral_message(message.channel,string)
 	else: #Default case
 		pass
 
