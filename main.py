@@ -34,7 +34,7 @@ action_storage = {
 		"kick" : lambda params,message : {
 			"author":message.author.id,
 			"action":params[0],
-			"message_id":message.id,
+			"message_id":None,
 			"target":sref_name(message.server,params[1]),
 			"name":params[2],
 			"long_name":params[3],
@@ -47,7 +47,7 @@ action_storage = {
 		"ban" : lambda params,message : {
 			"author":message.author.id,
 			"action":params[1],
-			"message_id":message.id,
+			"message_id":None,
 			"target":sref_name(message.server,params[1]),
 			"duration":int(params[2]),
 			"name":params[3],
@@ -67,7 +67,7 @@ action_output_templates = {
 		"ID: {3}\n"
 		"Author: {4}\n"
 		"Target: {5}\n"
-		"Votes {5}/{7}\n").format(
+		"Votes {6}/{7}\n").format(
 		doc['action'],
 		doc['name'],
 		doc['long_name'],
@@ -111,21 +111,21 @@ async def error_message(channel,content): #TODO: Handle 2000+ chars by breaking 
 		description = content,
 		color = discord.Colour.red()
 		)
-	await client.send_message(channel,embed=embed)
+	return await client.send_message(channel,embed=embed)
 async def neutral_message(channel,content): #TODO: See above
 	embed = discord.Embed(
 		type = "rich",
 		description = content,
 		color = discord.Colour.blue()
 		)
-	await client.send_message(channel,embed = embed)
+	return await client.send_message(channel,embed = embed)
 async def confirmation_message(channel,content): #TODO: See above
 	embed = discord.Embed(
 		type = "rich",
 		description = content,
 		color = discord.Colour.green()
 		)
-	await client.send_message(channel,embed = embed)
+	return await client.send_message(channel,embed = embed)
 
 def sderef_name(server,uid):
 	mem = server.get_member(uid)
@@ -174,12 +174,14 @@ async def on_message(message):
 @client.event
 async def on_reaction_add(reaction,user):
 	message = reaction.message
-	# Add vote	
-	doc = db.props.find_one({"active":True,"server":message.server.id,"message_id":message.id})
+	# Add vote
+	try:	
+		doc = db.props.find_one({"active":True,"server":message.server.id,"message_id":message.id})
+	except:
+		return
 	VoteEmoji = '\U0001F44C' #OK Hand sign
 	if not str(reaction.emoji).startswith(VoteEmoji):
 		return
-	print("A")
 	# Check to make sure user hasn't already voted
 	if user.id not in doc['voters']:
 		db.props.update_one({"_id":doc['_id']},{
@@ -188,8 +190,13 @@ async def on_reaction_add(reaction,user):
 		})
 	else:
 		pass
-	# Check vote threshold
+	# Update proposition message
 	doc = db.props.find_one({"_id":doc['_id']})
+	new_embed = discord.Embed(
+			color = discord.Colour.blue(),
+			description = action_output_templates[doc['action']](doc,message.server))
+	client.edit_message(message,embed = new_embed)
+	# Check vote threshold
 	if doc['votes'] >= doc['threshold'] * message.channel.server.member_count:
 		await confirmation_message(message.channel,"Proposition #%s has been accepted, executing..." % (str(doc['id'])))
 		await execute_action(message.channel,doc)
@@ -202,12 +209,24 @@ async def call_command(command,command_string,message):
 		try:
 			template = action_storage[user_params[0]](user_params,message)
 			docID = db.props.insert_one(template).inserted_id
+			doc = db.props.find_one({"_id":docID})
 		except UserNotFoundError as e:
 			await error_message(message.channel,'An error has occured with the name %s' % e.userQuery)
 		except:
 			await error_message(message.channel,'An error has occured')
 		else:
-			await confirmation_message(message.channel,'Successfully added proposition **#%s**' % (str(docID)))
+			# If this message is reacted too, it is considered a possible vote (evaluated in the on_reaction_add event)
+			# However, if it is deleted you must run the status command to create a new proposition message.
+			# Running the status command on a proposition that already has a message will create a new proposition
+			# message and will replace the old one.  The old message would no longer be updated
+			#await confirmation_message(message.channel,'Successfully added proposition **#%s**' % (str(docID)))
+			msg = await confirmation_message(message.channel,action_output_templates[user_params[0]](doc,message.server))
+			db.props.update_one({"_id":docID},{
+				"$set":{"message_id":msg.id}})
+			try:
+				client.delete_message(message)
+			except:
+				pass
 	elif command == 'remove':
 		pass
 	elif command == 'list':
