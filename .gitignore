@@ -5,6 +5,11 @@ config.json
 bin/
 share/
 lib/
+include/
+.Python
+
+# VSCode
+.vscode/
 
 # pip
 pip-selfcheck.json

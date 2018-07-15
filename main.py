@@ -5,6 +5,8 @@ import discord
 import asyncio
 import json
 import pymongo,bson
+# Custom modules
+import action,db,commands,logger
 
 
 #TODO: Add actual error messages
