@@ -1,8 +1,22 @@
 class Action:
-    pass
+    """Base class for other actions."""
+    def __init__(self):
+        pass
 
 class KickAction(Action):
-    pass
+    """Kicks a user.  A votekick"""
+    def __init__(self):
+        pass
+
+    def serialize(self):
+        """Provides a dict form of the action"""
+        pass
 
 class BanAction(Action):
-    pass
+    """Bans a user.  A voteban"""
+    def __init__(self):
+        pass
+
+    def serialize(self):
+        """Provides a dict form of the action"""
+        pass

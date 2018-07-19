@@ -1,20 +1,15 @@
 # Replace error messages with something that makes sense
-class InputError(Exception):
+class UserError(Exception):
 	def __init__(self, input_segment):
-		super().__init__("Something you said didn't make sense")
+		super().__init__("There was an error with your command")
 		self.input_segment = input_segment
 
 class DatabaseError(Exception):
 	def __init__(self, error):
-		super().__init__("Could not read database")
+		super().__init__("The database could not be reached")
 		self.error = error
 
-class UserNotFoundError(Exception):
+class SoftwareError(Exception):
 	def __init__(self, userQuery):
-		super().__init__("User not found")
+		super().__init__("An unexpected error occured in the backend")
 		self.userQuery = userQuery
-
-class DocNotFoundError(Exception):
-	def __init__(self, query):
-		super().__init__("Doc not found")
-		self.query = query
