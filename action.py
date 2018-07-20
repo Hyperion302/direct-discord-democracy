@@ -1,3 +1,5 @@
+import discord
+
 class Action:
     """Base class for other actions. Not in use"""
     def __init__(self,data):
@@ -16,7 +18,8 @@ class Action:
             "voters": [message.author.id],
             "server": message.server.id,
             "active": True,
-            "threshold": 0.75
+            "threshold": 0.75,
+            "quorum": round(message.server.member_count/0.25) # TODO: Make this dynamic for each server
         })
     
     @classmethod
@@ -32,9 +35,9 @@ class Action:
             "voters": [message.author.id],
             "server": message.server.id,
             "active": True,
-            "threshold": 1
+            "threshold": 1,
+            "quorum": round(message.server.member_count/0.25) # TODO: Make this dynamic for each server
         })
 
     def serialize(self):
         return self.__dict__
-
