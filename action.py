@@ -1,5 +1,3 @@
-import discord
-
 class Action:
     """Base class for other actions. Not in use"""
     def __init__(self,data):
@@ -10,6 +8,7 @@ class Action:
     def KickAction(cls,message,name,longName,target):
         """Creates a kick action through parameters"""
         return cls({
+            "type": "kick",
             "name": name,
             "longName": longName,
             "target": target,
@@ -20,13 +19,15 @@ class Action:
             "server": message.server.id,
             "active": True,
             "threshold": 0.75,
-            "quorum": round(message.server.member_count/0.25) # TODO: Make this dynamic for each server
+            "quorum": round(message.server.member_count/0.25) # TODO: Make this dynamic for each server.  Owner should
+            # be able to choose whether or not it is a percentage or a constant
         })
     
     @classmethod
     def BanAction(cls,message,name,longName,target,duration):
         """Creates a ban action through parameters"""
         return cls({
+            "type": "ban",
             "name": name,
             "longName": longName,
             "target": target,
@@ -38,7 +39,8 @@ class Action:
             "server": message.server.id,
             "active": True,
             "threshold": 1,
-            "quorum": round(message.server.member_count/0.25) # TODO: Make this dynamic for each server
+            "quorum": round(message.server.member_count/0.25) # TODO: Make this dynamic for each server.  Owner should
+            # be able to choose whether or not it is a percentage or a constant
         })
 
     def serialize(self):
