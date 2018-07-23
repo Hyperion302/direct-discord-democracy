@@ -4,6 +4,7 @@ config.json
 # ENV stuff
 env/
 .Python
+__pycache__
 
 # VSCode
 .vscode/

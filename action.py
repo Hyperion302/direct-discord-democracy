@@ -1,4 +1,4 @@
-class Action:
+class DDDAction:
     """Base class for other actions. Not in use"""
     def __init__(self,data):
         #Iterate over data and add each one as a key value attribute in __dict__
