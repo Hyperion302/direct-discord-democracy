@@ -7,7 +7,7 @@ class DBTable:
 
     def store_action(self,action):
         """Serialies and stores a single action"""
-        serial = action.serialize
+        serial = action.serialize()
         self.table.insert_one(serial)
     
     def query_one(self,query):
@@ -24,3 +24,16 @@ class DBTable:
         """Queries and returns a single action with the specified ID"""
         doc = self.table.find_one({"_id":id})
         return DDDAction(doc)
+
+class GeneralDB:
+    """Generalized wrapper with general functions for the mongo database"""
+    def __init__(self,table):
+        self.table = table
+    
+    def store_one(self,data):
+        """Stores one doc on the DB"""
+        return self.table.insert_one(data)
+    
+    def query_one(self,query):
+        """Queries DB for one doc"""
+        return self.table.query_one(query)

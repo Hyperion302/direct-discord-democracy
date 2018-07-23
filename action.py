@@ -4,13 +4,15 @@ class DDDAction:
         #Iterate over data and add each one as a key value attribute in __dict__
         self.__dict__ = data
         
+    # Internal ID's:
+    # <serverID>_<incrementing_integer>
+    # Users will only ever see and use the incrementing integer
     @classmethod
-    def KickAction(cls,message,name,longName,target):
+    def KickAction(cls,message,target):
         """Creates a kick action through parameters"""
         return cls({
             "type": "kick",
-            "name": name,
-            "longName": longName,
+            "internalID": 0, #TODO: Generate UUID
             "target": target,
             "messageId": message.id,
             "y": 1,
@@ -18,18 +20,17 @@ class DDDAction:
             "voters": [message.author.id],
             "server": message.server.id,
             "active": True,
-            "threshold": 0.75,
-            "quorum": round(message.server.member_count/0.25) # TODO: Make this dynamic for each server.  Owner should
+            "threshold": 0.5,
+            "quorum": round(message.server.member_count*0.25) # TODO: Make this dynamic for each server.  Owner should
             # be able to choose whether or not it is a percentage or a constant
         })
     
     @classmethod
-    def BanAction(cls,message,name,longName,target,duration):
+    def BanAction(cls,message,target,duration):
         """Creates a ban action through parameters"""
         return cls({
             "type": "ban",
-            "name": name,
-            "longName": longName,
+            "internalID": 0, #TODO: Generate UUID
             "target": target,
             "duration": duration,
             "messageId": message.id,
@@ -38,8 +39,8 @@ class DDDAction:
             "voters": [message.author.id],
             "server": message.server.id,
             "active": True,
-            "threshold": 1,
-            "quorum": round(message.server.member_count/0.25) # TODO: Make this dynamic for each server.  Owner should
+            "threshold": 0.66,
+            "quorum": round(message.server.member_count*0.25) # TODO: Make this dynamic for each server.  Owner should
             # be able to choose whether or not it is a percentage or a constant
         })
 
