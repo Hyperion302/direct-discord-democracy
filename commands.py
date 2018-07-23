@@ -1,64 +1,67 @@
 from db import DBTable
-from action import Action
+from action import DDDAction
 from logger import Logger
+from errors import UserError,DatabaseError,SoftwareError
+
+import argparse,sys
+
 class CommandManager:
     """Handles command detection and emoji reaction detection"""
-    def __init__(self):
-        pass
-    
-    def parseMessage(self,message):
-        """Handles a message and returns a list containing the command and it's parameters.\n  If not command is present, returns None"""
-        if message[0] != '>':
-            return None
-        # Strip first character
-        command = message[1:]
-
-        # Break into command parameters
-        command_params = command.split(':')
-
-        return command_params
-    def handleMessage(self,message):
+    def __init__(self,client,logger):
+        self.client = client
+        self.logger = logger
+        # Setup commands
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+       
+        # Add command
+        parserAdd = subparsers.add_parser("add")
+        parserAdd.add_argument("type",type=str,choices=['kick','ban'],help="The type of proposition to add.")
+        parserAdd.add_argument("name",type=str,nargs='+',help="The user friendly name of the proposition")
+        
+        # Finalize
+        self.parser = parser
+    async def handleMessage(self,message):
         """Routes and executes command methods"""
-        command_parameters = self.parseMessage(message.content)
-        if not command_parameters:
+        if message.content[:4] != '_DDD':
             return
-        route = {
-            "add": self.add,
-            "list": self.list_,#TODO: Better name
-            "status": self.status,
-            "help": self.help,
-            "about": self.about,
-            "find": self.find
-        }
-        route[command_parameters[0]](command_parameters,message)
-    def handleEmoji(self,emoji,message):
+        try:
+            parsedCommand = self.parser.parse_args(message.content[4:].split())
+        except: # User error
+            #TODO: Implement error handling
+            #NOTE: Better error messages (e.g the help messages from the argparse library) aren't possible
+            # due to the design of the argparse library not returning those messages in the exception :(
+            await self.logger.error("There was an error in your command", message.channel)
+            return
+
+    async def handleEmoji(self,reaction,user):
         """Handles an emoji reaction to a message"""
         pass
 
-    def add(self,params,message):
-        """The add command adds a proposition"""
+    async def add(self,params,message):
+        """The add command adds a proposition, and it's response is the status message"""
         pass
-    
-    def list_(self,params,message):
+
+    async def list_(self,params,message):
         """The list command lists quick info about all current propositions"""
         pass
     
-    def status(self,params,message):
+    async def status(self,params,message):
         """The status command creates a new link message that you can add emoji\n reactions to"""
         pass
     
-    def help(self,params,message):
+    async def help(self,params,message):
         """The help command prints out help info on commands"""
         pass
     
-    def about(self,params,message):
+    async def about(self,params,message):
         """The about command lists quick facts about the bot"""
         pass
     
-    def find(self,params,message):
+    async def find(self,params,message):
         """The find command queries for a proposition and prints a new status command\ne.g. status command above"""
         pass
     
-    def handleVote(self,user,action):
+    async def handleVote(self,user,action):
         """Handle function that should only be called by handleMessage"""
         pass

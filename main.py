@@ -24,7 +24,7 @@ cm = CommandManager(client,log)
 # Event handlers
 @client.event
 async def on_message(message):
-    cm.handleMessage(message)
+    await cm.handleMessage(message)
 
 @client.event
 async def on_ready():
