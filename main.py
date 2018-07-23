@@ -1,5 +1,5 @@
-import discord
 import asyncio
+import discord
 import json
 import pymongo,bson
 # Custom modules
@@ -26,8 +26,12 @@ cm = CommandManager(client,log)
 async def on_message(message):
     cm.handleMessage(message)
 
+@client.event
+async def on_ready():
+	print("Logged in as %s" % (client.user.name))
+
 #@client.event
 #async def on_reaction_add(reaction,user)
 #    cm.handleEmoji(reaction,user)
 
-
+client.run(config['bot_token'])
