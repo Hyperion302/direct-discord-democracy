@@ -1,17 +1,14 @@
-from db import DBTable
-from action import DDDAction
-from logger import Logger
-from errors import UserError,DatabaseError,SoftwareError
-
-import argparse,sys
+import db,action,logger,errors,utils
+import argparse
 
 class CommandManager:
     """Handles command detection and emoji reaction detection"""
-    def __init__(self,client,logger,db):
+    def __init__(self,client,logger,db,sw):
         self.client = client
         self.logger = logger
         self.db = db
-        # TODO: Add admin commands for adjusting quorum and thresholds
+        self.serverWrapper = sw
+        # TODO: Add admin commands for adjusting quorum, thresholds, and delay
         # _DDD {command} {params}
         # command = add
         #   params[0] = kick
@@ -24,6 +21,8 @@ class CommandManager:
         #   _DDD status {propIndex}
         # command = help
         #   _DDD help [command]
+        # command = admin
+        #   _DDD admin -d [PropDelay] -q [Quorum %]
 
         # Setup commands
         #NOTE: the add command is so large and diverse, it has it's own ArgumentParser that is passed the result from the
@@ -45,6 +44,10 @@ class CommandManager:
 
         topSubparser_help = topSubparsers.add_parser("help")
         topSubparser_help.add_argument("-c","--helpCommand",required=False,type=str,nargs=1)
+
+        topSubparser_admin = topSubparsers.add_parser("admin")
+        topSubparser_admin.add_argument("-d","--delay",required=False,type=str,nargs=1)
+        topSubparser_admin.add_argument("-q","--quorum",required=False,type=float,nargs=1)
 
         # Fill out add parser
         addSubparsers = addParser.add_subparsers(dest="type")
@@ -96,9 +99,9 @@ class CommandManager:
         propType = parsedAdd.type
         propAction = None
         if propType == "kick":
-            propAction = DDDAction.KickAction(message,parsedAdd.target)
+            propAction = action.DDDAction.KickAction(message,parsedAdd.target[0])
         elif propType == "ban":
-            propAction = DDDAction.BanAction(message,parsedAdd.target,parsedAdd.duration)
+            propAction = action.DDDAction.BanAction(message,parsedAdd.target[0],utils.toSeconds(parsedAdd.duration[0]))
         else:
             #TODO: Implement error handling
             await self.logger.error("There was an error with the prop type %s.  Check '_DDD help -c add' for a list of prop types" % propType, message.channel)
@@ -137,3 +140,4 @@ class CommandManager:
     async def handleVote(self,user,action):
         """Handle function that should only be called by handleMessage"""
         pass
+

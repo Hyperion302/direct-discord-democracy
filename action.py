@@ -20,9 +20,7 @@ class DDDAction:
             "voters": [message.author.id],
             "server": message.server.id,
             "active": True,
-            "threshold": 0.5,
-            "quorum": round(message.server.member_count*0.25) # TODO: Make this dynamic for each server.  Owner should
-            # be able to choose whether or not it is a percentage or a constant
+            "threshold": 0.5
         })
     
     @classmethod
@@ -39,9 +37,7 @@ class DDDAction:
             "voters": [message.author.id],
             "server": message.server.id,
             "active": True,
-            "threshold": 0.66,
-            "quorum": round(message.server.member_count*0.25) # TODO: Make this dynamic for each server.  Owner should
-            # be able to choose whether or not it is a percentage or a constant
+            "threshold": 0.66
         })
 
     def serialize(self):
