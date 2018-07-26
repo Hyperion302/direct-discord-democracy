@@ -5,18 +5,16 @@ import pymongo,bson
 # Custom modules
 from commands import CommandManager
 from logger import Logger
-from db import DBTable,GeneralDB
+from db import DBTable,DBServerWrapper
 
 # GLOBAL TODO:
 #TODO: Add time delays for actions (adjustable by admin)
 #TODO: Set the quorum and thresholds to be adjustable by admin
 #TODO: Store admin settings in a new table (servers)
+#TODO: Add logic to actions (So they do stuff when they complete)
 #TODO: Add other commands such as status/remove/help/about
 #TODO: Beautify status logs
 #TODO: Status logs should De activate their respective props when deleted, and revert when edited. (use on_delete_message and on_edit_message)
-
-
-
 
 
 # Load config file
@@ -30,9 +28,10 @@ mongoclient = pymongo.MongoClient(config['db_srv'])
 
 # Instantiate classes
 db = DBTable(mongoclient.ddd.props)
-gndb = GeneralDB(mongoclient.ddd.servers)
+sw = DBServerWrapper(mongoclient.ddd.servers)
 log = Logger(client)
-cm = CommandManager(client,log,db)
+cm = CommandManager(client,log,db,sw)
+
 
 # Event handlers
 @client.event
@@ -45,9 +44,9 @@ async def on_ready():
 
 @client.event
 async def on_server_join(server):
-    doc = gndb.query_one({'server_id':server.id})
+    sw.checkServer(server)
 @client.event
 async def on_server_leave(server):
-    pass
+    pass #TODO: Purge server from server DB
 
 client.run(config['bot_token'])

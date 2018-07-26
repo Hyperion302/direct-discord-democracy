@@ -1,5 +1,6 @@
-from action import DDDAction
-import pymongo
+import action
+import pymongo,re
+import utils
 class DBTable:
     """Wrapper class for the mongo database"""
     def __init__(self,table):
@@ -13,27 +14,39 @@ class DBTable:
     def query_one(self,query):
         """Pases a query to the underlying database and returns a single action"""
         doc = self.table.find_one(query)
-        return DDDAction(doc)
+        return action.DDDAction(doc)
 
     def query_many(self,query):
         """Passes on a query to the underlying database and returns a list of actions"""
         docs = self.table.find(query)
-        return [DDDAction(doc) for doc in docs]
+        return [action.DDDAction(doc) for doc in docs]
     
     def find_by_id(self,id):
         """Queries and returns a single action with the specified ID"""
         doc = self.table.find_one({"_id":id})
-        return DDDAction(doc)
+        return action.DDDAction(doc)
 
-class GeneralDB:
-    """Generalized wrapper with general functions for the mongo database"""
+class DBServerWrapper:
+    """A wrapper designed to access a server's custom values"""
     def __init__(self,table):
         self.table = table
     
-    def store_one(self,data):
-        """Stores one doc on the DB"""
-        return self.table.insert_one(data)
-    
-    def query_one(self,query):
-        """Queries DB for one doc"""
-        return self.table.query_one(query)
+    def checkServer(self,server):
+        """Query for a server, and if it doesn't exist create it's entry in the DB"""
+        doc = self.table.find_one({'serverID':server.id})
+        if not doc:
+            # Add a server in if it doesn't exist
+            self.table.insert_one({'serverID':server.id,'quorum':0.25,'delay':utils.toSeconds("0d2h0m")})
+
+    def getServerData(self,server):
+        """Query the DB for a server and return it's custom values"""
+        self.checkServer(server)
+        doc = self.table.find_one({'serverID':server.id})
+        return doc
+
+    def updateServerDdata(self,server,quorum=None,delay=None):
+        """Update a server with a new set of values, otherwise default"""
+        if quorum:
+            self.table.update_one({'serverID':server.id},{'$set':{'quorum':quorum}})
+        if delay:
+            self.table.update_one({'serverID':server.id},{'$set':{'delay':delay}})
