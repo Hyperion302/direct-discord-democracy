@@ -59,7 +59,7 @@ class DDDAction:
     def formatAction(self):
         """Returns the action in a pretty format"""
         # Glorified switch statement
-        parentTemplate = ("Proposition **#%d**\n"
+        parentTemplate = ("Proposition **#%d**: %s\n"
                         "**%d** :thumbsup: **%d** :thumbsdown:\n"
                         "%s")
         metadata = None
@@ -72,6 +72,7 @@ class DDDAction:
             # TODO: Error handling
             return
         return parentTemplate % (self.internalID,
+                                self.type,
                                 self.y,
                                 self.n,
                                 metadata)
