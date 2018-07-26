@@ -42,8 +42,12 @@ async def on_ready():
 	print("Logged in as %s" % (client.user.name))
 
 @client.event
+async def on_reaction_add(reaction,user):
+    await cm.handleEmoji(reaction,user)
+
+@client.event
 async def on_server_join(server):
-    sw.checkServer(server)
+    await sw.checkServer(server)
 @client.event
 async def on_server_leave(server):
     pass #TODO: Purge server from server DB

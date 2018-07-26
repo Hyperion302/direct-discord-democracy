@@ -160,12 +160,12 @@ class CommandManager:
             await self.logger.error("There was an error with the admin command's quorum parameter.  Check '_DDD help -c admin' for help.", message.channel)
         
         # Execute the update and wait for status
-        status = self.serverWrapper.updateServerData(message.server,quorum,delay)
+        status = await self.serverWrapper.updateServerData(message.server,quorum,delay)
         if status:
             await self.logger.success("Successfully changed server values",message.channel)
         else:
             pass #TODO: Add error handling
 
     async def handleVote(self,user,action):
-        """Handle function that should only be called by handleMessage"""
+        """Handle function that should only be called by handleEmoji"""
         pass

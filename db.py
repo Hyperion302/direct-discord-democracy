@@ -31,22 +31,22 @@ class DBServerWrapper:
     def __init__(self,table):
         self.table = table
     
-    def checkServer(self,server):
+    async def checkServer(self,server):
         """Query for a server, and if it doesn't exist create it's entry in the DB"""
         doc = self.table.find_one({'serverID':server.id})
         if not doc:
             # Add a server in if it doesn't exist
             self.table.insert_one({'serverID':server.id,'quorum':0.25,'delay':utils.toSeconds("0d2h0m")})
 
-    def getServerData(self,server):
+    async def getServerData(self,server):
         """Query the DB for a server and return it's custom values"""
-        self.checkServer(server)
+        await self.checkServer(server)
         doc = self.table.find_one({'serverID':server.id})
         return doc
 
-    def updateServerData(self,server,quorum=None,delay=None):
+    async def updateServerData(self,server,quorum=None,delay=None):
         """Update a server with a new set of values, otherwise default"""
-        self.checkServer(server)
+        await self.checkServer(server)
         if quorum:
             self.table.update_one({'serverID':server.id},{'$set':{'quorum':quorum}})
         if delay:
