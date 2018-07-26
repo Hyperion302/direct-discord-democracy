@@ -10,7 +10,6 @@ from db import DBTable,DBServerWrapper
 # GLOBAL TODO:
 #TODO: Add time delays for actions (adjustable by admin)
 #TODO: Set the quorum and thresholds to be adjustable by admin
-#TODO: Store admin settings in a new table (servers)
 #TODO: Add logic to actions (So they do stuff when they complete)
 #TODO: Add other commands such as status/remove/help/about
 #TODO: Beautify status logs

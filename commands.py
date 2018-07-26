@@ -47,7 +47,7 @@ class CommandManager:
 
         topSubparser_admin = topSubparsers.add_parser("admin")
         topSubparser_admin.add_argument("-d","--delay",required=False,type=str,nargs=1)
-        topSubparser_admin.add_argument("-q","--quorum",required=False,type=float,nargs=1)
+        topSubparser_admin.add_argument("-q","--quorum",required=False,type=int,nargs=1)
 
         # Fill out add parser
         addSubparsers = addParser.add_subparsers(dest="type")
@@ -78,7 +78,8 @@ class CommandManager:
             "add": self.add,
             "remove": self.remove,
             "status": self.status,
-            "help": self.help
+            "help": self.help,
+            "admin": self.admin
         }
         await route[parsedCommand.command](parsedCommand,message)
 
@@ -133,11 +134,33 @@ class CommandManager:
         """The find command queries for a proposition and prints a new status command\ne.g. status command above"""
         pass
     
-    async def remove(self,parsedmessage):
+    async def remove(self,parsed,message):
         """The remove command removes the specified proposition from the running."""
         pass
+
+    async def admin(self,parsed,message):
+        """An admin command to set server-wide values"""
+        quorum = parsed.quorum
+        delay = parsed.delay
+
+        # Pre processing
+        if delay:
+            delay = delay[0]
+        if quorum:
+            quorum = int(quorum[0])/100
+
+        # Check if the quorum is in range
+        if quorum and (quorum > 1 or quorum < 0.01):
+            #TODO: Error handling
+            await self.logger.error("There was an error with the admin command's quorum parameter.  Check '_DDD help -c admin' for help.", message.channel)
+        
+        # Execute the update and wait for status
+        status = self.serverWrapper.updateServerData(message.server,quorum,delay)
+        if status:
+            await self.logger.success("Successfully changed server values",message.channel)
+        else:
+            pass #TODO: Add error handling
 
     async def handleVote(self,user,action):
         """Handle function that should only be called by handleMessage"""
         pass
-

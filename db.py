@@ -44,9 +44,13 @@ class DBServerWrapper:
         doc = self.table.find_one({'serverID':server.id})
         return doc
 
-    def updateServerDdata(self,server,quorum=None,delay=None):
+    def updateServerData(self,server,quorum=None,delay=None):
         """Update a server with a new set of values, otherwise default"""
+        self.checkServer(server)
         if quorum:
             self.table.update_one({'serverID':server.id},{'$set':{'quorum':quorum}})
         if delay:
             self.table.update_one({'serverID':server.id},{'$set':{'delay':delay}})
+        
+        #TODO: Check for DB errors
+        return (quorum,delay)
