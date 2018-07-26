@@ -140,6 +140,11 @@ class CommandManager:
 
     async def admin(self,parsed,message):
         """An admin command to set server-wide values"""
+        # Check to see if the user is an admin
+        if not message.author.server_permissions.administrator:
+            await self.logger.error("You have insufficient permissions to execute this command",message.channel)
+            return
+
         quorum = parsed.quorum
         delay = parsed.delay
 
