@@ -23,3 +23,7 @@ def fromSeconds(sec):
     #TODO: If sec is now >0, throw an error.
 
     return (days,hours,minutes)
+
+def ffromSeconds(sec):
+    """Wraps fromSeconds to return a formatted string"""
+    return "%dd%dh%dm" % fromSeconds(sec)
