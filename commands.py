@@ -85,7 +85,7 @@ class CommandManager:
 
     async def handleEmoji(self,reaction,user):
         """Handles an emoji reaction to a message"""
-        pass
+        print("Emoji received!")
 
     async def add(self,parsed,message):
         """The add command adds a proposition, and it's response is the status message"""
