@@ -48,3 +48,4 @@ adminHelp = "**The admin command is meant for values that are to be configured d
         "**'quorum. [(kwawr-uhm)] The minimum number of members of a committee or legislative body who must be present before business can officially or legally be conducted.'**\n"\
         "After the delay, one of the things the bot will check for when the delay is over is the quorum.\nThe server has a global quorum that must be reached which is used to calculate: (yae+nae)/server.member_count >= serverData.quorum\n"\
         "The quourum should be specified as an integer between 1 and 100, inclusive.  This is converted to a *percent* of the server."
+aboutHelp = "**The about command displays introductory information about the DDD bot**"

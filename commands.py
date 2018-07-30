@@ -15,8 +15,8 @@ class CommandManager:
         #       _DDD add kick {target}
         #   params[0] =  ban
         #       _DDD add ban {target} {duration}
-        # command = remove
-        #   _DDD remove {propIndex}
+        # command = about
+        #   _DDD about
         # command = status
         #   _DDD status {propIndex}
         # command = help
@@ -36,9 +36,6 @@ class CommandManager:
         topSubparser_add = topSubparsers.add_parser("add")
         topSubparser_add.add_argument("parameters",type=str,nargs='+')
 
-        topSubparser_remove = topSubparsers.add_parser("remove")
-        topSubparser_remove.add_argument("propIndex",type=int,nargs=1,help="The internal index of the prop to remove.")
-
         topSubparser_status = topSubparsers.add_parser("status")
         topSubparser_status.add_argument("propIndex",type=int,nargs=1,help="The internal index of the prop to create a status message for.")
 
@@ -49,6 +46,7 @@ class CommandManager:
         topSubparser_admin.add_argument("-d","--delay",required=False,type=str,help="The specific delay for the server")
         topSubparser_admin.add_argument("-q","--quorum",required=False,type=int,help="The specific quorum for the server")
 
+        topSubparser_about = topSubparsers.add_parser("about")
         # Fill out add parser
         addSubparsers = addParser.add_subparsers(dest="type")
 
@@ -63,9 +61,9 @@ class CommandManager:
         self.topParser = topParser
         self.addParser = addParser
         self.topSubparser_admin = topSubparser_admin
-        self.topSubparser_remove = topSubparser_remove
         self.topSubparser_help = topSubparser_help
         self.topSubparser_status = topSubparser_status
+        self.topSubparser_about = topSubparser_about
     async def handleMessage(self,message):
         """Routes and executes command methods"""
         if message.content[:4] != '_DDD':
@@ -82,7 +80,8 @@ class CommandManager:
             "add": self.add,
             "status": self.status,
             "help": self.help,
-            "admin": self.admin
+            "admin": self.admin,
+            "about": self.about
         }
         await route[parsedCommand.command](parsedCommand,message)
 
@@ -130,6 +129,20 @@ class CommandManager:
         """The status command creates a new link message that you can add emoji\n reactions to"""
         pass
     
+    async def about(self,parsed,message):
+        """The about command prints simple information about the bot"""
+        #TODO: Fill in TBD
+        about_info = "**Author**\n"\
+                    "Jonas#1723\n\n"\
+                    "**Guilds**\n"\
+                    "TBD\n"\
+                    "**Open Propositions**\n"\
+                    "TBD\n"\
+                    "**Total Propositions**\n"\
+                    "TBD\n"
+        embed = discord.Embed(type="rich",color=discord.Color.blue(),description=about_info,title="Direct Discord Democracy")
+        await self.client.send_message(message.channel,embed=embed)
+    
     async def help(self,parsed,message):
         """The help command prints out help info on commands"""
         helpMessage = None
@@ -143,6 +156,8 @@ class CommandManager:
             helpMessage = "%s\n%s" % (self.topSubparser_status.format_help(),helpMessages.statusHelp)
         elif parsed.helpCommand == "admin":
             helpMessage = "%s\n%s" % (self.topSubparser_admin.format_help(),helpMessages.adminHelp)
+        elif parsed.helpCommand == "about":
+            helpMessage = "%s\n%s" % (self.topSubparser_about.format_help(),helpMessages.aboutHelp)
         else:
             # TODO: Error handling
             await self.logger.log("Help for command %s not found" % parsed.helpCommand, message.channel)
