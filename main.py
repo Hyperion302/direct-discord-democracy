@@ -14,13 +14,17 @@ from voteChecker import voteCheckingClient
 
 #TODO: IMPORTANT! Run cleanMessageDeque in a seperate thread!
 
-#TODO: Remove vote no, calculate the vote by:
+#TODO: Bugcheck the vote execution/checking system.  It was finalized in a hurry
+
+#TODO: Add a check to make sure the bot's rank is on top of the heiarchy
+
+#TODO: When someone removes their reaction, remove their vote
+#TODO: When someone votes, remove their other vote on the same prop (if it exists)
 #TODO: Transition from messageId to uniqueId
 #TODO: Add time delays for actions (adjustable by admin)
-#TODO: Add logic to actions (So they do stuff when they complete)
 #TODO: Add other commands such as status/remove/help/about
 #TODO: Status logs should De activate their respective props when deleted, and revert when edited. (use on_delete_message and on_edit_message)
-#TODO: Remove extra await's (Should only await things like DB lookups)
+#TODO: Remove extra await's (Should only await things like DB lookups) and make DB queries coro
 #TODO: Have command messages deleted after ~30s
 
 
