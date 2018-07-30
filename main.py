@@ -9,10 +9,12 @@ from logger import Logger
 from db import DBTable,DBServerWrapper
 from threading import Thread
 from action import DDDAction
+from voteChecker import voteCheckingClient
 # GLOBAL TODO:
 
 #TODO: IMPORTANT! Run cleanMessageDeque in a seperate thread!
 
+#TODO: Remove vote no, calculate the vote by:
 #TODO: Transition from messageId to uniqueId
 #TODO: Add time delays for actions (adjustable by admin)
 #TODO: Add logic to actions (So they do stuff when they complete)
@@ -27,7 +29,7 @@ config = json.loads(open("config.json",'r').read())
 
 # Setup discord client
 client = discord.Client()
-voteCheckClient = discord.Client()
+
 
 # Setup DB
 mongoclient = pymongo.MongoClient(config['db_srv'])
@@ -38,6 +40,9 @@ sw = DBServerWrapper(mongoclient.ddd.servers)
 log = Logger(client)
 cm = CommandManager(client,log,db,sw)
 
+# Because we offer minute precision on delays, I must run a seperate client every minute to
+# update vote counts and execute actions
+voteCheckClient = voteCheckingClient(mongoclient.ddd.props,sw)
 
 # Event handlers
 @client.event
@@ -107,15 +112,18 @@ async def cleanDequeLoop(client): #TODO: Prevent drifing by accounting for how l
         print("New length: %d\nNew Size: %d" % (len(client.messages),sys.getsizeof(client.messages)))
         await asyncio.sleep(120-executionTime) #Prevent drifting
 
+
 #client.run(config['bot_token'])
 
 loop = asyncio.get_event_loop()
 try:
     loop.run_until_complete(asyncio.gather(
                             client.start(config['bot_token']),
-                            cleanDequeLoop(client)))
+                            cleanDequeLoop(client),
+                            voteCheckClient.start(config['bot_token'])))
 except KeyboardInterrupt:
     loop.run_until_complete(client.logout())
+    loop.run_until_complete(voteCheckClient.logout())
     print("Backing up messages in messageBackup.bin")
     try:
         backupFile = open("messageBackup.bin",'wb')
@@ -125,6 +133,7 @@ except KeyboardInterrupt:
         print("Error writing backup: %s" % str(e))
 except SystemExit:
     loop.run_until_complete(client.logout())
+    loop.run_until_complete(voteCheckClient.logout())
     print("Backing up messages in messageBackup.bin")
     try:
         backupFile = open("messageBackup.bin",'wb')
@@ -134,6 +143,7 @@ except SystemExit:
         print("Error writing backup: %s" % str(e))
 except Exception as e:
     loop.run_until_complete(client.logout())
+    loop.run_until_complete(voteCheckClient.logout())
     print("Backing up messages in messageBackup.bin")
     try:
         backupFile = open("messageBackup.bin",'wb')

@@ -156,7 +156,7 @@ class CommandManager:
 
         # Pre processing
         if delay:
-            delay = delay[0]
+            delay = utils.toSeconds(delay[0])
         if quorum:
             quorum = int(quorum[0])/100
 
@@ -166,7 +166,7 @@ class CommandManager:
             await self.logger.error("There was an error with the admin command's quorum parameter.  Check '_DDD help -c admin' for help.", message.channel)
         
         # Execute the update and wait for status
-        status = await self.serverWrapper.updateServerData(message.server,quorum,utils.toSeconds(delay))
+        status = await self.serverWrapper.updateServerData(message.server,quorum,delay)
         if status:
             await self.logger.success("Successfully changed server values",message.channel)
         else:

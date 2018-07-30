@@ -47,7 +47,7 @@ class DBServerWrapper:
         """Query the DB for a server and return it's custom values"""
         await self.checkServer(server)
         doc = self.table.find_one({'serverID':server.id})
-        return {'quorum':doc.quorum,'delay':doc.delay}
+        return {'quorum':doc['quorum'],'delay':doc['delay']}
 
     async def updateServerData(self,server,quorum=None,delay=None):
         """Update a server with a new set of values, otherwise default"""
