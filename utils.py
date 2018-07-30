@@ -31,4 +31,7 @@ def ffromSeconds(sec):
 def mentionToId(mention):
     """Converts a mention string to an ID"""
     return mention.replace('<@!','').replace('>','')
+def idToMention(id):
+    """Converts an ID to a mention string"""
+    return "<@!%s>" % id
 

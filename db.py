@@ -3,7 +3,7 @@ import pymongo,re
 import utils
 class DBTable:
     """Wrapper class for the mongo database"""
-    async def __init__(self,table):
+    def __init__(self,table):
         self.table = table
 
     async def store_action(self,action):
@@ -28,7 +28,7 @@ class DBTable:
     
     async def update_one(self,action,updateQuery):
         """Updated a single action in the DB"""
-        self.table.update_one({'messageId':action.messageId,'active':action.active},updateQuery) #TODO: Query filter
+        self.table.update_one({'messageId':action.messageId},updateQuery) #TODO: Query filter
         # could be replaced by action.__dict__?
 
 class DBServerWrapper:

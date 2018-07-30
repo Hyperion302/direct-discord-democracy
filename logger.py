@@ -5,10 +5,11 @@ class Logger:
     def __init__(self,client):
         self.client = client
         self.colors = {
-            "error": discord.Color.red(),
+            "error": discord.Color.dark_red(),
             "log": discord.Color.blue(),
             "success": discord.Color.green(),
-            "status": discord.Color.dark_green()
+            "status": discord.Color.dark_green(),
+            "inactive": discord.Color.red(),
         }
     
     async def error(self,error_message,channel):

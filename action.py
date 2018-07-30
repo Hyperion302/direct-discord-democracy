@@ -1,4 +1,4 @@
-import datetime,utils,logger
+import datetime,utils,logger,asyncio
 class DDDAction:
     """Base class for actions"""
     def __init__(self,data):
@@ -19,11 +19,11 @@ class DDDAction:
     # <serverID>_<incrementing_integer>
     # Users will only ever see and use the incrementing integer
     @classmethod
-    def KickAction(cls,message,target):
+    def KickAction(cls,message,creator,target):
         """Creates a kick action through parameters"""
         return cls({
             "type": "kick",
-            "internalID": 0, #TODO: Generate UUID
+            "created_by": creator.id,
             "target": target,
             "messageId": message.id,
             "y": 1,
@@ -37,11 +37,11 @@ class DDDAction:
         })
     
     @classmethod
-    def BanAction(cls,message,target,duration):
+    def BanAction(cls,message,target,creator,duration):
         """Creates a ban action through parameters"""
         return cls({
             "type": "ban",
-            "internalID": 0, #TODO: Generate UUID
+            "created_by": creator.id,
             "target": target,
             "duration": duration,
             "messageId": message.id,
@@ -62,7 +62,8 @@ class DDDAction:
     def formatAction(self):
         """Returns the action in a pretty format"""
         # Glorified switch statement
-        parentTemplate = ("Proposition **#%d**: %s\n"
+        parentTemplate = ("%s"
+                        "Proposition by %s: %s\n"
                         "**%d** :thumbsup: **%d** :thumbsdown:\n"
                         "%s")
         metadata = None
@@ -74,7 +75,12 @@ class DDDAction:
         else:
             # TODO: Error handling
             return
-        return parentTemplate % (self.internalID,
+        # Check if deactivated
+        activityMessage = ""
+        if not self.active:
+            activityMessage = ":x: INACTIVE :x:\n"
+        return parentTemplate % (activityMessage,
+                                utils.idToMention(self.created_by),
                                 self.type,
                                 self.y,
                                 self.n,

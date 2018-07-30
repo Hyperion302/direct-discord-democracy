@@ -8,7 +8,6 @@ from commands import CommandManager
 from logger import Logger
 from db import DBTable,DBServerWrapper
 from threading import Thread
-from action import DDDAction
 from voteChecker import voteCheckingClient
 # GLOBAL TODO:
 
@@ -20,7 +19,6 @@ from voteChecker import voteCheckingClient
 
 #TODO: When someone removes their reaction, remove their vote
 #TODO: When someone votes, remove their other vote on the same prop (if it exists)
-#TODO: Transition from messageId to uniqueId
 #TODO: Add time delays for actions (adjustable by admin)
 #TODO: Add other commands such as status/remove/help✓/about
 #TODO: Status logs should De activate their respective props when deleted, and revert when edited. (use on_delete_message and on_edit_message)

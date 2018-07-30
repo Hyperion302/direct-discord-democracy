@@ -80,7 +80,6 @@ class CommandManager:
             return
         route = {
             "add": self.add,
-            "remove": self.remove,
             "status": self.status,
             "help": self.help,
             "admin": self.admin
@@ -96,6 +95,9 @@ class CommandManager:
                 await self.handleVote(user,'y',action,reaction.message)
             else:
                 await self.handleVote(user,'n',action,reaction.message)
+        elif e.startswith('❌'):
+            action = await self.db.query_one({'messageId':reaction.message.id,'active':True})
+            await self.handleRemove(user,action,reaction.message)
 
     async def add(self,parsed,message):
         """The add command adds a proposition, and it's response is the status message"""
@@ -110,9 +112,9 @@ class CommandManager:
         propType = parsedAdd.type
         propAction = None
         if propType == "kick":
-            propAction = action.DDDAction.KickAction(message,parsedAdd.target[0])
+            propAction = action.DDDAction.KickAction(message,message.author,parsedAdd.target[0])
         elif propType == "ban":
-            propAction = action.DDDAction.BanAction(message,parsedAdd.target[0],utils.toSeconds(parsedAdd.duration[0]))
+            propAction = action.DDDAction.BanAction(message,message.author,parsedAdd.target[0],utils.toSeconds(parsedAdd.duration[0]))
         else:
             #TODO: Implement error handling
             await self.logger.error("There was an error with the prop type %s.  Check '_DDD help -c add' for a list of prop types" % propType, message.channel)
@@ -136,8 +138,7 @@ class CommandManager:
             helpMessage = "%s\n%s" % (self.topParser.format_help(),helpMessages.generalHelp)
         elif parsed.helpCommand == "add":
             helpMessage = "%s\n%s" % (self.addParser.format_help(),helpMessages.genAddHelp(message.server))
-        elif parsed.helpCommand == "remove":
-            helpMessage = "%s\n%s" % (self.topSubparser_remove.format_help(),helpMessages.removeHelp)
+        #NOTE: the remove command has been removed (hahaha)
         elif parsed.helpCommand == "status":
             helpMessage = "%s\n%s" % (self.topSubparser_status.format_help(),helpMessages.statusHelp)
         elif parsed.helpCommand == "admin":
@@ -147,9 +148,6 @@ class CommandManager:
             await self.logger.log("Help for command %s not found" % parsed.helpCommand, message.channel)
             return
         await self.logger.log(helpMessage,message.channel)
-    async def remove(self,parsed,message):
-        """The remove command removes the specified proposition from the running."""
-        pass
 
     async def admin(self,parsed,message):
         """An admin command to set server-wide values"""
@@ -181,11 +179,19 @@ class CommandManager:
 
     async def handleVote(self,user,vote,action,message):
         """Handle function that should only be called by handleEmoji"""
+        # TODO: If any time the vote action fails, remove the vote.
+        
+        doc = await self.db.query_one({'messageId':action.messageId})
+        # Check to make sure the props are active
+        if not doc.active:
+            # TODO: Remove the reaction
+            return
 
         # Verify one-time vote
-        voters = await self.db.query_one({'messageId':action.messageId}).voters
+        voters = doc.voters
         if user.id in voters:
             # Silent error because not caused by user
+            # TODO: Remove the second vote/reaction
             return
 
         # Update vote count in DB
@@ -200,4 +206,19 @@ class CommandManager:
         # Update vote count in message
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['status'],description=log_message)
+        await self.client.edit_message(message,embed=embed)
+    
+    async def handleRemove(self,user,action,message):
+        """Handle function that should only be called by handleEmoji"""
+        if user.id != action.created_by:
+            #TODO: Remove their reaction
+            return
+        
+        # Deactivate action
+        action.active = False
+        await self.db.update_one(action,{'$set':{'active':False}})
+
+        # Update status message
+        log_message = action.formatAction()
+        embed = discord.Embed(type="rich",color=self.logger.colors['inactive'],description=log_message)
         await self.client.edit_message(message,embed=embed)

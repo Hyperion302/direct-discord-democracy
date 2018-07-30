@@ -20,7 +20,7 @@ class voteCheckingClient(discord.Client):
                 server = channel.server
                 action = Action.DDDAction(action)
 
-                print("Checking action #%d" % action.internalID)
+                print("Checking action...")
 
                 # Check delay
                 serverData = await self.sw.getServerData(server)
@@ -46,8 +46,8 @@ class voteCheckingClient(discord.Client):
                     continue
                     
                 # If the vote passed, call action
-                print("Executing action #%d" % action.internalID)
-                await self.logger.success("Executing action #%d" % action.internalID,channel)
+                print("Executing action ")
+                await self.logger.success("Executing action",channel) #TODO: Instead of logging, add "Executed" to the embed
                 await action.execute(self,server,self.logger)
                 
                 # Deactivate prop
