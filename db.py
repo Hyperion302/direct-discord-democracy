@@ -3,30 +3,30 @@ import pymongo,re
 import utils
 class DBTable:
     """Wrapper class for the mongo database"""
-    def __init__(self,table):
+    async def __init__(self,table):
         self.table = table
 
-    def store_action(self,action):
+    async def store_action(self,action):
         """Serialies and stores a single action"""
         serial = action.serialize()
         self.table.insert_one(serial)
     
-    def query_one(self,query):
+    async def query_one(self,query):
         """Pases a query to the underlying database and returns a single action"""
         doc = self.table.find_one(query)
         return action.DDDAction(doc)
 
-    def query_many(self,query):
+    async def query_many(self,query):
         """Passes on a query to the underlying database and returns a list of actions"""
         docs = self.table.find(query)
         return [action.DDDAction(doc) for doc in docs]
     
-    def find_by_id(self,id):
+    async def find_by_id(self,id):
         """Queries and returns a single action with the specified ID"""
         doc = self.table.find_one({"_id":id})
         return action.DDDAction(doc)
     
-    def update_one(self,action,updateQuery):
+    async def update_one(self,action,updateQuery):
         """Updated a single action in the DB"""
         self.table.update_one({'messageId':action.messageId,'active':action.active},updateQuery) #TODO: Query filter
         # could be replaced by action.__dict__?

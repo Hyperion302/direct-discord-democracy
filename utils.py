@@ -1,4 +1,4 @@
-import re,math
+import re,math,asyncio
 
 def toSeconds(ts):
     """Converts a time string in format DD:HH:MM into into seconds"""
@@ -31,3 +31,4 @@ def ffromSeconds(sec):
 def mentionToId(mention):
     """Converts a mention string to an ID"""
     return mention.replace('<@!','').replace('>','')
+

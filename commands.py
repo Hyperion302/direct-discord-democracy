@@ -91,7 +91,7 @@ class CommandManager:
         """Handles an emoji reaction to a message"""
         e = str(reaction.emoji)
         if e.startswith(('👍','👎')):
-            action = self.db.query_one({'messageId':reaction.message.id,'active':True})
+            action = await self.db.query_one({'messageId':reaction.message.id,'active':True})
             if e.startswith('👍'):
                 await self.handleVote(user,'y',action,reaction.message)
             else:
@@ -122,7 +122,7 @@ class CommandManager:
         # If you do not, it default's to the command message
         propAction.messageId = await self.logger.status(propAction,message.channel)
         # Store prop
-        self.db.store_action(propAction)
+        await self.db.store_action(propAction)
         # Done!  
     async def status(self,parsed,message):
         """The status command creates a new link message that you can add emoji\n reactions to"""
@@ -183,7 +183,7 @@ class CommandManager:
         """Handle function that should only be called by handleEmoji"""
 
         # Verify one-time vote
-        voters = self.db.query_one({'messageId':action.messageId}).voters
+        voters = await self.db.query_one({'messageId':action.messageId}).voters
         if user.id in voters:
             # Silent error because not caused by user
             return
@@ -191,11 +191,11 @@ class CommandManager:
         # Update vote count in DB
         if vote == 'y':
             action.y = action.y + 1 #NOTE: I don't requery the DB to save time
-            self.db.update_one(action,{'$inc':{'y':1}})
+            await self.db.update_one(action,{'$inc':{'y':1}})
         elif vote == 'n':
             action.n = action.n + 1 #NOTE: I don't requery the DB to save time
-            self.db.update_one(action,{'$inc':{'n':1}})
-        self.db.update_one(action,{'$addToSet':{'voters':user.id}}) #TODO: Batch updates?
+            await self.db.update_one(action,{'$inc':{'n':1}})
+        await self.db.update_one(action,{'$addToSet':{'voters':user.id}}) #TODO: Batch updates?
 
         # Update vote count in message
         log_message = action.formatAction()
