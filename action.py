@@ -63,15 +63,15 @@ class DDDAction:
         """Returns the action in a pretty format"""
         # Glorified switch statement
         parentTemplate = ("%s"
-                        "Proposition by %s: %s\n"
-                        "**%d** :thumbsup: **%d** :thumbsdown:\n"
+                        "Proposition by %s\n\n"
+                        "**%d** :thumbsup: **%d** :thumbsdown:\n\n"
                         "%s")
         metadata = None
         if self.type == "kick":
             metadata = "Target: %s" % self.target
         elif self.type == "ban":
-            metadata = ("Target: %s\n"
-                        "Duration: %s\n") % (self.target,utils.ffromSeconds(self.duration))
+            metadata = ("Target: %s\n\n"
+                        "Duration: %s") % (self.target,utils.ffromSeconds(self.duration))
         else:
             # TODO: Error handling
             return
@@ -81,7 +81,6 @@ class DDDAction:
             activityMessage = ":x: INACTIVE :x:\n"
         return parentTemplate % (activityMessage,
                                 utils.idToMention(self.created_by),
-                                self.type,
                                 self.y,
                                 self.n,
                                 metadata)

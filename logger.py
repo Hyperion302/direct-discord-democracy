@@ -1,4 +1,4 @@
-import discord
+import discord,utils
 import asyncio
 class Logger:
     """Logs messages to channels and provides debug logging"""
@@ -33,6 +33,6 @@ class Logger:
     async def status(self,action,channel):
         """Logs a status message and returns it's ID"""
         log_message = action.formatAction()
-        embed = discord.Embed(type="rich",color=self.colors['status'],description=log_message)
+        embed = discord.Embed(type="rich",color=self.colors['status'],description=log_message,title="%s Proposition" % (action.type.upper()))
         msg = await self.client.send_message(channel,embed = embed)
         return msg.id
