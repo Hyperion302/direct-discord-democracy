@@ -33,6 +33,10 @@ class voteCheckingClient(discord.Client):
                 yae = action.y
                 nae = action.n
                     
+                # If the server is large, update the user cache to contain offline members.
+                if server.large:
+                    await self.request_offline_members(server)
+
                 # Check quorum
                 totalPercent = (yae+nae)/server.member_count
                 if totalPercent < serverData['quorum']:
@@ -52,6 +56,12 @@ class voteCheckingClient(discord.Client):
                 
                 # Deactivate prop
                 self.table.update_one({"messageId":action.messageId},{"$set":{"active":False}})
+
+                # Update prop message
+                status_message = self.get_message(channel,action.messageId)
+                log_message = action.formatAction()
+                embed = discord.Embed(type="rich",color=self.logger.colors['inactive'],description=log_message)
+                await self.client.edit_message(status_message,embed=embed)
                 print("\n")
             executionTime = (asyncio.get_event_loop().time())-startTime
             print("Done checking votes after %d seconds" % executionTime)
