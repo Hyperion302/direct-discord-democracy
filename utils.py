@@ -27,3 +27,7 @@ def fromSeconds(sec):
 def ffromSeconds(sec):
     """Wraps fromSeconds to return a formatted string"""
     return "%dd%dh%dm" % fromSeconds(sec)
+
+def mentionToId(mention):
+    """Converts a mention string to an ID"""
+    return mention.replace('<@!','').replace('>','')

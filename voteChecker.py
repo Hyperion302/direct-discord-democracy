@@ -1,9 +1,10 @@
 import discord,asyncio,datetime
 import action as Action
 class voteCheckingClient(discord.Client):
-    def __init__(self,table,sw):
+    def __init__(self,table,sw,logger):
         self.table = table
         self.sw = sw
+        self.logger = logger
         super().__init__()
     async def on_ready(self):
         print("Logged in voteCheckingClient")
@@ -18,7 +19,6 @@ class voteCheckingClient(discord.Client):
                 server = channel.server
                 action = Action.DDDAction(action)
                 # Check delay
-                print(server.id)
                 serverData = await self.sw.getServerData(server)
                 delay = serverData['delay']
                 if action.created_at+delay <= int(datetime.datetime.utcnow().timestamp()):
@@ -34,7 +34,8 @@ class voteCheckingClient(discord.Client):
                         print("Threshold not reached")
                     # If the vote passed, call action
                     print("Executing action #%d" % action.internalID)
-                    action.execute(server)
+                    await action.execute(self,server,self.logger)
+                    self.table.update_one({"messageId":action.messageId},{"$set":{"active":False}})
             executionTime = (asyncio.get_event_loop().time())-startTime
             print("Done checking votes after %d seconds" % executionTime)
             await asyncio.sleep(60-executionTime)

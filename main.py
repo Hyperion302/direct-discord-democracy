@@ -42,7 +42,7 @@ cm = CommandManager(client,log,db,sw)
 
 # Because we offer minute precision on delays, I must run a seperate client every minute to
 # update vote counts and execute actions
-voteCheckClient = voteCheckingClient(mongoclient.ddd.props,sw)
+voteCheckClient = voteCheckingClient(mongoclient.ddd.props,sw,log)
 
 # Event handlers
 @client.event
@@ -62,7 +62,6 @@ async def on_ready():
         print("Loaded %d old messages into messages deque" % len(client.messages))
     except Exception as e:
         print("Error loading from backup: %s" % str(e))
-    
 
 @client.event
 async def on_reaction_add(reaction,user):

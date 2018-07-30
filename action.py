@@ -1,4 +1,4 @@
-import datetime,utils
+import datetime,utils,logger
 class DDDAction:
     """Base class for actions"""
     def __init__(self,data):
@@ -28,7 +28,7 @@ class DDDAction:
             "messageId": message.id,
             "y": 1,
             "n": 1,
-            "voters": [message.author.id,target],
+            "voters": [message.author.id,utils.mentionToId(target)],
             "server": message.server.id,
             "active": True,
             "threshold": 0.5,
@@ -47,7 +47,7 @@ class DDDAction:
             "messageId": message.id,
             "y": 1,
             "n": 1,
-            "voters": [message.author.id,target],
+            "voters": [message.author.id,utils.mentionToId(target)],
             "server": message.server.id,
             "active": True,
             "threshold": 0.66,
@@ -56,6 +56,7 @@ class DDDAction:
         })
 
     def serialize(self):
+        """Returns a dictionary form of the action for storage"""
         return self.__dict__
     
     def formatAction(self):
@@ -78,3 +79,15 @@ class DDDAction:
                                 self.y,
                                 self.n,
                                 metadata)
+    async def execute(self,client,server,logger):
+        """Applies the given action on a server"""
+        if self.type == "kick":
+            target = server.get_member(utils.mentionToId(self.target))
+            #await logger.success("Kicking %s" % self.target)
+            await client.kick(target) #TODO: Error handling
+        elif self.type == "ban":
+            target = server.get_member(utils.mentionToId(self.target))
+            #await logger.success("Banning %s" % self.target)
+            await client.ban(target,delete_message_days=0) #TODO: Error handling
+        else:
+            raise NotImplementedError
