@@ -3,7 +3,7 @@ class DDDAction:
     """Base class for actions"""
     def __init__(self,data):
         #Iterate over data and add each one as a key value attribute of self
-        self.dbData = data
+        self.dbData = data #TODO: Prevent this from being stored in the DB
         for key,value in data.items():
             setattr(self,key,value)
     
@@ -32,7 +32,8 @@ class DDDAction:
             "server": message.server.id,
             "active": True,
             "threshold": 0.5,
-            "created_at": int(datetime.datetime.utcnow().timestamp())
+            "created_at": int(datetime.datetime.utcnow().timestamp()),
+            "channelId": message.channel.id
         })
     
     @classmethod
@@ -50,7 +51,8 @@ class DDDAction:
             "server": message.server.id,
             "active": True,
             "threshold": 0.66,
-            "created_at": int(datetime.datetime.utcnow().timestamp())
+            "created_at": int(datetime.datetime.utcnow().timestamp()),
+            "channelId": message.channel.id
         })
 
     def serialize(self):

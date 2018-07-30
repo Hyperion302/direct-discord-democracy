@@ -7,8 +7,13 @@ from collections import deque
 from commands import CommandManager
 from logger import Logger
 from db import DBTable,DBServerWrapper
-
+from threading import Thread
+from action import DDDAction
 # GLOBAL TODO:
+
+#TODO: IMPORTANT! Run cleanMessageDeque in a seperate thread!
+
+#TODO: Transition from messageId to uniqueId
 #TODO: Add time delays for actions (adjustable by admin)
 #TODO: Add logic to actions (So they do stuff when they complete)
 #TODO: Add other commands such as status/remove/help/about
@@ -22,6 +27,7 @@ config = json.loads(open("config.json",'r').read())
 
 # Setup discord client
 client = discord.Client()
+voteCheckClient = discord.Client()
 
 # Setup DB
 mongoclient = pymongo.MongoClient(config['db_srv'])
@@ -105,7 +111,9 @@ async def cleanDequeLoop(client): #TODO: Prevent drifing by accounting for how l
 
 loop = asyncio.get_event_loop()
 try:
-    loop.run_until_complete(asyncio.gather(client.start(config['bot_token']),cleanDequeLoop(client)))
+    loop.run_until_complete(asyncio.gather(
+                            client.start(config['bot_token']),
+                            cleanDequeLoop(client)))
 except KeyboardInterrupt:
     loop.run_until_complete(client.logout())
     print("Backing up messages in messageBackup.bin")
@@ -124,8 +132,16 @@ except SystemExit:
         print("Finished backing up messages")
     except Exception as e:
         print("Error writing backup: %s" % str(e))
-
-
-    # Backup deque
+except Exception as e:
+    loop.run_until_complete(client.logout())
+    print("Backing up messages in messageBackup.bin")
+    try:
+        backupFile = open("messageBackup.bin",'wb')
+        pickle.dump(client.messages,backupFile)
+        print("Finished backing up messages")
+    except Exception as e:
+        print("Error writing backup: %s" % str(e))
+    # After backing up messages, re-raise the error
+    raise e
 finally:
     loop.close()

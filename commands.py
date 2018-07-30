@@ -1,5 +1,5 @@
 import db,action,logger,errors,utils
-import argparse
+import argparse,discord,datetime
 
 class CommandManager:
     """Handles command detection and emoji reaction detection"""
@@ -85,7 +85,13 @@ class CommandManager:
 
     async def handleEmoji(self,reaction,user):
         """Handles an emoji reaction to a message"""
-        print("Emoji received!")
+        e = str(reaction.emoji)
+        if e.startswith(('👍','👎')):
+            action = self.db.query_one({'messageId':reaction.message.id,'active':True})
+            if e.startswith('👍'):
+                await self.handleVote(user,'y',action,reaction.message)
+            else:
+                await self.handleVote(user,'n',action,reaction.message)
 
     async def add(self,parsed,message):
         """The add command adds a proposition, and it's response is the status message"""
@@ -160,12 +166,28 @@ class CommandManager:
             await self.logger.error("There was an error with the admin command's quorum parameter.  Check '_DDD help -c admin' for help.", message.channel)
         
         # Execute the update and wait for status
-        status = await self.serverWrapper.updateServerData(message.server,quorum,delay)
+        status = await self.serverWrapper.updateServerData(message.server,quorum,utils.toSeconds(delay))
         if status:
             await self.logger.success("Successfully changed server values",message.channel)
         else:
             pass #TODO: Add error handling
 
-    async def handleVote(self,user,action):
+    async def handleVote(self,user,vote,action,message):
         """Handle function that should only be called by handleEmoji"""
-        pass
+        # Verify one-time vote
+        voters = self.db.query_one({'messageId':action.messageId}).voters
+        if user.id in voters:
+            # Silent error because not caused by user
+            return
+        # Update vote count in DB
+        if vote == 'y':
+            action.y = action.y + 1 #NOTE: I don't requery the DB to save time
+            self.db.update_one(action,{'$inc':{'y':1}})
+        elif vote == 'n':
+            action.n = action.n + 1 #NOTE: I don't requery the DB to save time
+            self.db.update_one(action,{'$inc':{'n':1}})
+        self.db.update_one(action,{'$addToSet':{'voters':user.id}}) #TODO: Batch updates?
+        # Update vote count in message
+        log_message = action.formatAction()
+        embed = discord.Embed(type="rich",color=self.logger.colors['status'],description=log_message)
+        await self.client.edit_message(message,embed=embed)

@@ -31,8 +31,6 @@ class Logger:
 
     async def status(self,action,channel):
         """Logs a status message and returns it's ID"""
-
-        #log_message = '\n'.join([str(value) for key,value in action.serialize().items()]) #TODO: Beautify
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.colors['status'],description=log_message)
         msg = await self.client.send_message(channel,embed = embed)

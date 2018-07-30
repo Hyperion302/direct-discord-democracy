@@ -25,6 +25,11 @@ class DBTable:
         """Queries and returns a single action with the specified ID"""
         doc = self.table.find_one({"_id":id})
         return action.DDDAction(doc)
+    
+    def update_one(self,action,updateQuery):
+        """Updated a single action in the DB"""
+        self.table.update_one({'messageId':action.messageId,'active':action.active},updateQuery) #TODO: Query filter
+        # could be replaced by action.__dict__?
 
 class DBServerWrapper:
     """A wrapper designed to access a server's custom values"""
@@ -42,7 +47,7 @@ class DBServerWrapper:
         """Query the DB for a server and return it's custom values"""
         await self.checkServer(server)
         doc = self.table.find_one({'serverID':server.id})
-        return doc
+        return {'quorum':doc.quorum,'delay':doc.delay}
 
     async def updateServerData(self,server,quorum=None,delay=None):
         """Update a server with a new set of values, otherwise default"""
