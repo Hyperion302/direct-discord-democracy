@@ -1,4 +1,4 @@
-import db,action,logger,errors,utils
+import db,action,logger,errors,utils,helpMessages
 import argparse,discord,datetime
 
 class CommandManager:
@@ -27,7 +27,7 @@ class CommandManager:
         # Setup commands
         #NOTE: the add command is so large and diverse, it has it's own ArgumentParser that is passed the result from the
         # add command.
-        topParser = argparse.ArgumentParser(prog="DDD")
+        topParser = argparse.ArgumentParser(prog="_DDD")
         addParser = argparse.ArgumentParser(prog="add")
 
         # Fill out top level parser
@@ -37,17 +37,17 @@ class CommandManager:
         topSubparser_add.add_argument("parameters",type=str,nargs='+')
 
         topSubparser_remove = topSubparsers.add_parser("remove")
-        topSubparser_remove.add_argument("propIndex",type=int,nargs=1)
+        topSubparser_remove.add_argument("propIndex",type=int,nargs=1,help="The internal index of the prop to remove.")
 
         topSubparser_status = topSubparsers.add_parser("status")
-        topSubparser_status.add_argument("propIndex",type=int,nargs=1)
+        topSubparser_status.add_argument("propIndex",type=int,nargs=1,help="The internal index of the prop to create a status message for.")
 
         topSubparser_help = topSubparsers.add_parser("help")
-        topSubparser_help.add_argument("-c","--helpCommand",required=False,type=str,nargs=1)
+        topSubparser_help.add_argument("-c","--helpCommand",required=False,type=str)
 
         topSubparser_admin = topSubparsers.add_parser("admin")
-        topSubparser_admin.add_argument("-d","--delay",required=False,type=str,nargs=1)
-        topSubparser_admin.add_argument("-q","--quorum",required=False,type=int,nargs=1)
+        topSubparser_admin.add_argument("-d","--delay",required=False,type=str,help="The specific delay for the server")
+        topSubparser_admin.add_argument("-q","--quorum",required=False,type=int,help="The specific quorum for the server")
 
         # Fill out add parser
         addSubparsers = addParser.add_subparsers(dest="type")
@@ -62,6 +62,10 @@ class CommandManager:
         # Finalize
         self.topParser = topParser
         self.addParser = addParser
+        self.topSubparser_admin = topSubparser_admin
+        self.topSubparser_remove = topSubparser_remove
+        self.topSubparser_help = topSubparser_help
+        self.topSubparser_status = topSubparser_status
     async def handleMessage(self,message):
         """Routes and executes command methods"""
         if message.content[:4] != '_DDD':
@@ -119,27 +123,30 @@ class CommandManager:
         propAction.messageId = await self.logger.status(propAction,message.channel)
         # Store prop
         self.db.store_action(propAction)
-        # Done!
-    async def list_(self,parsed,message):
-        """The list command lists quick info about all current propositions"""
-        pass
-    
+        # Done!  
     async def status(self,parsed,message):
         """The status command creates a new link message that you can add emoji\n reactions to"""
         pass
     
     async def help(self,parsed,message):
         """The help command prints out help info on commands"""
-        pass
-    
-    async def about(self,parsed,message):
-        """The about command lists quick facts about the bot"""
-        pass
-    
-    async def find(self,parsed,message):
-        """The find command queries for a proposition and prints a new status command\ne.g. status command above"""
-        pass
-    
+        helpMessage = None
+        if not parsed.helpCommand:
+            # General help
+            helpMessage = "%s\n%s" % (self.topParser.format_help(),helpMessages.generalHelp)
+        elif parsed.helpCommand == "add":
+            helpMessage = "%s\n%s" % (self.addParser.format_help(),helpMessages.genAddHelp(message.server))
+        elif parsed.helpCommand == "remove":
+            helpMessage = "%s\n%s" % (self.topSubparser_remove.format_help(),helpMessages.removeHelp)
+        elif parsed.helpCommand == "status":
+            helpMessage = "%s\n%s" % (self.topSubparser_status.format_help(),helpMessages.statusHelp)
+        elif parsed.helpCommand == "admin":
+            helpMessage = "%s\n%s" % (self.topSubparser_admin.format_help(),helpMessages.adminHelp)
+        else:
+            # TODO: Error handling
+            await self.logger.log("Help for command %s not found" % parsed.helpCommand, message.channel)
+            return
+        await self.logger.log(helpMessage,message.channel)
     async def remove(self,parsed,message):
         """The remove command removes the specified proposition from the running."""
         pass
@@ -156,9 +163,9 @@ class CommandManager:
 
         # Pre processing
         if delay:
-            delay = utils.toSeconds(delay[0])
+            delay = utils.toSeconds(delay)
         if quorum:
-            quorum = int(quorum[0])/100
+            quorum = int(quorum)/100
 
         # Check if the quorum is in range
         if quorum and (quorum > 1 or quorum < 0.01):
@@ -174,11 +181,13 @@ class CommandManager:
 
     async def handleVote(self,user,vote,action,message):
         """Handle function that should only be called by handleEmoji"""
+
         # Verify one-time vote
         voters = self.db.query_one({'messageId':action.messageId}).voters
         if user.id in voters:
             # Silent error because not caused by user
             return
+
         # Update vote count in DB
         if vote == 'y':
             action.y = action.y + 1 #NOTE: I don't requery the DB to save time
@@ -187,6 +196,7 @@ class CommandManager:
             action.n = action.n + 1 #NOTE: I don't requery the DB to save time
             self.db.update_one(action,{'$inc':{'n':1}})
         self.db.update_one(action,{'$addToSet':{'voters':user.id}}) #TODO: Batch updates?
+
         # Update vote count in message
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['status'],description=log_message)
