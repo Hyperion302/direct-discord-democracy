@@ -10,6 +10,7 @@ from db import DBTable,DBServerWrapper
 from threading import Thread
 from voteChecker import voteCheckingClient
 from errors import UserError, DatabaseError, SoftwareError
+import utils
 # GLOBAL TODO:
 
 #TODO: IMPORTANT! Run cleanMessageDeque in a seperate thread!

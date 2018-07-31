@@ -180,7 +180,7 @@ class CommandManager:
         helpMessage = None
         if not parsed.helpCommand:
             # General help
-            helpMessage = "%s\n%s" % (self.topParser.format_help(),helpMessages.generalHelp)
+            helpMessage = "%s\n%s" % (self.topParser.format_help(),helpMessages.genGeneralHelp(message.server,utils))
         elif parsed.helpCommand == "add":
             helpMessage = "%s\n%s" % (self.addParser.format_help(),helpMessages.genAddHelp(message.server))
         #NOTE: the remove command has been removed (hahaha)

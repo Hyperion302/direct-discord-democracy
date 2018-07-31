@@ -16,7 +16,7 @@ def fgetAvailableProps(server):
     if 'ban' in props:
         outStrings.append("**ban** : target(user) duration(time)\ne.g. `_DDD add ban @billy 2d3h4m` (Ban @billy for 2 days, 3 hours, and 4 minutes)")
     return '\n'.join(outStrings)
-generalHelp = "**Use the command `_DDD help -c <command>` to get more help on a specific command**\n"\
+genGeneralHelp = lambda server,utils : ("**Use the command `_DDD help -c <command>` to get more help on a specific command**\n"\
             "Available commands:\n"\
             "`add`\n"\
             "`admin`\n\n"\
@@ -25,7 +25,10 @@ generalHelp = "**Use the command `_DDD help -c <command>` to get more help on a 
             "**How to vote:**\n\n"\
             "To vote on a specific proposition, add a :thumbsup: or :thumbsdown: reaction to the status message.\n\n"\
             "**How to cancel your proposition**:\n\n"\
-            "If you want to cancel the proposition that *you* created, react to the status message with a :x: emoji."
+            "If you want to cancel the proposition that *you* created, react to the status message with a :x: emoji.\n\n"\
+            "**The following roles have immunity to the bot:**\n"\
+            "%s\n"\
+            "**To prevent immunity, put the Direct Discord Democracy role above their roles on the hierarchy.**") % '\n'.join([role.mention for role in utils.checkHierarchy(server,server.me)[0]])
 genAddHelp = lambda server : ("**The add command is the focus of this bot.  Use it to add propositions to the server list.**\n"\
         "Provide parameters (if neccessary) to a proposition by adding them after the proposition.\n\n*user* type parameters MUST be specified in @mention form.\n*date* and *time* type parameters MUST be specified in DdHhMm (e.g. 0d0h1m)\n\n"\
         "Available proposition types and their parameters:\n<prop type> : <parameter 1>(<parameter 1 type>) etc.\n"\

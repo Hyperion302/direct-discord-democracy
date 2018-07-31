@@ -50,3 +50,9 @@ def idToMention(id):
     """Converts an ID to a mention string"""
     return "<@!%s>" % id
 
+def checkHierarchy(server,member):
+        """Returns a list of roles beneath and above the bot"""
+        roles = server.roles
+        above = [role for role in roles if member.top_role < role]
+        below = [role for role in roles if member.top_role > role]
+        return (above,below)
