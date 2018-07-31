@@ -26,12 +26,12 @@ class DDDAction:
             "created_by": creator.id,
             "target": target,
             "messageId": message.id,
-            "y": 1,
-            "n": 1,
-            "voters": [message.author.id,utils.mentionToId(target)],
+            "y": 0,
+            "n": 0,
+            "voters": [],
             "server": message.server.id,
             "active": True,
-            "threshold": 0.5,
+            "threshold": 0.5, # Majority
             "created_at": int(datetime.datetime.utcnow().timestamp()),
             "channelId": message.channel.id
         })
@@ -45,12 +45,12 @@ class DDDAction:
             "target": target,
             "duration": duration,
             "messageId": message.id,
-            "y": 1,
-            "n": 1,
-            "voters": [message.author.id,utils.mentionToId(target)],
+            "y": 0,
+            "n": 0,
+            "voters": [],
             "server": message.server.id,
             "active": True,
-            "threshold": 0.66,
+            "threshold": 0.66, # Supermajority
             "created_at": int(datetime.datetime.utcnow().timestamp()),
             "channelId": message.channel.id
         })

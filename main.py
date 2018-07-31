@@ -69,8 +69,20 @@ async def on_reaction_add(reaction,user):
     await cm.handleEmoji(reaction,user)
 
 @client.event
+async def on_reaction_clear(message,reactions):
+    # NOTE: I do nothing, because the api does not pass me the user who's vote was removed.  Because of this I can not
+    # remove them from the voters list, and if they try to vote again they wouldn't be able to.  An admin (or someone with sufficient permissions)
+    # could clear votes he does not like and those users would not be able to vote again.  This defeats the entire purpose of the bot.
+    pass
+
+@client.event
+async def on_reaction_remove(reaction,user):
+    await cm.handleRemoveEmoji(reaction,user)
+
+@client.event
 async def on_server_join(server):
     await sw.checkServer(server)
+
 @client.event
 async def on_server_leave(server):
     pass #TODO: Purge server from server DB

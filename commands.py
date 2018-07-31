@@ -96,7 +96,16 @@ class CommandManager:
                 await self.handleVote(user,'n',action,reaction.message)
         elif e.startswith('❌'):
             action = await self.db.query_one({'messageId':reaction.message.id,'active':True})
-            await self.handleRemove(user,action,reaction.message)
+            await self.handleRemoveStatus(user,action,reaction.message)
+    async def handleRemoveEmoji(self,reaction,user):
+        """Handles an emoji being removed from a message"""
+        e = str(reaction.emoji)
+        if e.startswith(('👍','👎')):
+            action = await self.db.query_one({'messageId':reaction.message.id,'active':True})
+            if e.startswith('👍'):
+                await self.handleRemoveVote(user,'y',action,reaction.message)
+            else:
+                await self.handleRemoveVote(user,'n',action,reaction.message)
 
     async def add(self,parsed,message):
         """The add command adds a proposition, and it's response is the status message"""
@@ -222,8 +231,31 @@ class CommandManager:
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['status'],description=log_message)
         await self.client.edit_message(message,embed=embed)
-    
-    async def handleRemove(self,user,action,message):
+
+    async def handleRemoveVote(self,user,vote,action,message):
+        """Handle function that should only be called by handleRemoveEmoji"""
+        # Update vote count in DB
+        if vote == 'y' and action.y > 0:
+            action.y = action.y - 1 #NOTE: I don't requery the DB to save time
+            await self.db.update_one(action,{'$inc':{'y':-1}})
+        elif vote == 'n' and action.n > 0:
+            action.n = action.n - 1 #NOTE: I don't requery the DB to save time
+            await self.db.update_one(action,{'$inc':{'n':-1}})
+        else:
+            # TODO: Error handling
+            return
+
+        #NOTE: If user is None, we don't know who to mark off a vote for.  We have to just subtract the vote from the tally
+        # and live with it.  This is a big issue.
+        if user:
+            await self.db.update_one(action,{'$pull':{'voters':user.id}}) #TODO: Batch updates?
+
+        # Update vote count in message
+        log_message = action.formatAction()
+        embed = discord.Embed(type="rich",color=self.logger.colors['status'],description=log_message)
+        await self.client.edit_message(message,embed=embed)
+
+    async def handleRemoveStatus(self,user,action,message):
         """Handle function that should only be called by handleEmoji"""
         if user.id != action.created_by:
             #TODO: Remove their reaction
