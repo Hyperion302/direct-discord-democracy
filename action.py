@@ -37,7 +37,7 @@ class DDDAction:
         })
     
     @classmethod
-    def BanAction(cls,message,target,creator,duration):
+    def BanAction(cls,message,creator,target,duration):
         """Creates a ban action through parameters"""
         return cls({
             "type": "ban",

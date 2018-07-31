@@ -79,6 +79,18 @@ class CommandManager:
         }
         await route[parsedCommand.command](parsedCommand,message)
 
+    async def handleMessageDelete(self,message):
+        """Handles when a message was deleted"""
+        # Look for a status message with that ID
+        action = await self.db.query_one({'messageId':message.id})
+        if action:
+            await self.handleStatusDelete(action,message)
+
+    async def handleStatusDelete(self,action,statusMessage):
+        """Handles when a status message was deleted"""
+        messageID = await self.logger.status(action,statusMessage.channel)
+        await self.db.update_one(action,{'$set':{'messageId':messageID}})
+
     async def handleEmoji(self,reaction,user):
         """Handles an emoji reaction to a message"""
         e = str(reaction.emoji)
@@ -91,6 +103,7 @@ class CommandManager:
         elif e.startswith('❌'):
             action = await self.db.query_one({'messageId':reaction.message.id,'active':True})
             await self.handleRemoveStatus(user,action,reaction.message,reaction)
+
     async def handleRemoveEmoji(self,reaction,user):
         """Handles an emoji being removed from a message"""
         e = str(reaction.emoji)

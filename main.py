@@ -14,14 +14,11 @@ from errors import UserError, DatabaseError, SoftwareError
 
 #TODO: IMPORTANT! Run cleanMessageDeque in a seperate thread!
 
-#TODO: Bugcheck the vote execution/checking system.  It was finalized in a hurry
-
 #TODO: Add a check to make sure the bot's rank is on top of the heiarchy
 
 #TODO: When performing a client operation that requires elevated permissions, check for permissions.  If 
 # the operation fails, print a permission error and cancel the operation.
 
-#TODO: Status logs should De activate their respective props when deleted, and revert when edited. (use on_delete_message and on_edit_message)
 #TODO: Have command messages deleted after ~30s
 #TODO: Split commands.py into commands.py and votes.py
 
@@ -59,6 +56,9 @@ async def on_message(message):
     except DatabaseError as e:
         print(e)
         await log.error(e.message,message.channel)
+    except Exception as e:
+        print(e)
+        await log.error(str(e),message.channel)
 
 @client.event
 async def on_ready():
@@ -87,7 +87,9 @@ async def on_reaction_add(reaction,user):
     except DatabaseError as e:
         print(e)
         await log.error(e.message,reaction.message.channel)
-
+    except Exception as e:
+        print(e)
+        await log.error(str(e),reaction.message.channel)
 @client.event
 async def on_reaction_clear(message,reactions):
     #NOTE: Untested
@@ -102,7 +104,9 @@ async def on_reaction_clear(message,reactions):
     except DatabaseError as e:
         print(e)
         await log.error(e.message,message.channel)
-
+    except Exception as e:
+        print(e)
+        await log.error(str(e),message.channel)
 @client.event
 async def on_reaction_remove(reaction,user):
     try:
@@ -116,7 +120,9 @@ async def on_reaction_remove(reaction,user):
     except DatabaseError as e:
         print(e)
         await log.error(e.message,reaction.message.channel)
-
+    except Exception as e:
+        print(e)
+        await log.error(str(e),reaction.message.channel)
 @client.event
 async def on_server_join(server):
     try:
@@ -130,10 +136,30 @@ async def on_server_join(server):
     except DatabaseError as e:
         print(e)
         await log.error(e.message,server.default_channel)
+    except Exception as e:
+        print(e)
+        await log.error(str(e),server.default_channel)
 
 @client.event
 async def on_server_leave(server):
     pass #TODO: Purge server from server DB
+
+@client.event
+async def on_message_delete(message):
+    try:
+        await cm.handleMessageDelete(message)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except Exception as e:
+        print(e)
+        await log.error(str(e),message.channel)
 
 # Oh Boi.  DiscordPY stores all messages that it receives in a deque.  
 # This deque is stored in memory and has a default cap of 5000 messages.

@@ -21,7 +21,7 @@ class DBTable:
         except:
             raise errors.DatabaseError(query,"An error occured while finding an action matching the query %s." % str(query))
         if not doc:
-            raise errors.DatabaseError(query,"Unable to find an action matching the query %s." % str(query))
+            return None
         return action.DDDAction(doc)
 
     async def query_many(self,query):
@@ -31,7 +31,7 @@ class DBTable:
         except:
             raise errors.DatabaseError(query,"An error occured while finding actions matching the query %s." % str(query))
         if len(docs) == 0:
-            raise errors.DatabaseError(query,"Unable to find any actions matching the query %s." % str(query))
+            return None
         return [action.DDDAction(doc) for doc in docs]
     
     async def find_by_id(self,id):
@@ -41,7 +41,7 @@ class DBTable:
         except:
             raise errors.DatabaseError(id,"An error occured while finding an action with internal ID %s." % str(id))
         if not doc:
-            raise errors.DatabaseError(id,"Unable to find an action with internal ID %s." % str(id))
+            return None
         return action.DDDAction(doc)
     
     async def update_one(self,action,updateQuery):
