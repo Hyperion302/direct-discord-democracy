@@ -115,8 +115,23 @@ class CommandManager:
         propType = parsedAdd.type
         propAction = None
         if propType == "kick":
+            # Check that the target exists
+            uid = utils.mentionToId(parsedAdd.target[0])
+            if not message.server.get_member(uid):
+                #TODO: Error handling
+                await self.logger.error("Could not find member `%s`." % parsedAdd.target[0],message.channel)
+                return
+    
+            # Instantiate action
             propAction = action.DDDAction.KickAction(message,message.author,parsedAdd.target[0])
         elif propType == "ban":
+            # Check that the target exists
+            uid = utils.mentionToId(parsedAdd.target[0])
+            if not message.server.get_member(uid):
+                #TODO: Error handling
+                await self.logger.error("Could not find member `%s`.  Is the user offline?" % parsedAdd.target[0])
+                return
+    
             propAction = action.DDDAction.BanAction(message,message.author,parsedAdd.target[0],utils.toSeconds(parsedAdd.duration[0]))
         else:
             #TODO: Implement error handling
