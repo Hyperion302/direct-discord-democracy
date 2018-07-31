@@ -36,9 +36,6 @@ class CommandManager:
         topSubparser_add = topSubparsers.add_parser("add")
         topSubparser_add.add_argument("parameters",type=str,nargs='+')
 
-        topSubparser_status = topSubparsers.add_parser("status")
-        topSubparser_status.add_argument("propIndex",type=int,nargs=1,help="The internal index of the prop to create a status message for.")
-
         topSubparser_help = topSubparsers.add_parser("help")
         topSubparser_help.add_argument("-c","--helpCommand",required=False,type=str)
 
@@ -62,7 +59,6 @@ class CommandManager:
         self.addParser = addParser
         self.topSubparser_admin = topSubparser_admin
         self.topSubparser_help = topSubparser_help
-        self.topSubparser_status = topSubparser_status
         self.topSubparser_about = topSubparser_about
     async def handleMessage(self,message):
         """Routes and executes command methods"""
@@ -74,11 +70,10 @@ class CommandManager:
             #TODO: Implement error handling
             #NOTE: Better error messages (e.g the help messages from the argparse library) aren't possible
             # due to the design of the argparse library not returning those messages in the exception :(
-            await self.logger.error("There was an error in your command.  If you would like a help message,  use the command _DDD help.", message.channel)
+            await self.logger.error("There was an error in your command.  See '_DDD help' for help.", message.channel)
             return
         route = {
             "add": self.add,
-            "status": self.status,
             "help": self.help,
             "admin": self.admin,
             "about": self.about
@@ -134,9 +129,6 @@ class CommandManager:
         # Store prop
         await self.db.store_action(propAction)
         # Done!  
-    async def status(self,parsed,message):
-        """The status command creates a new link message that you can add emoji\n reactions to"""
-        pass
     
     async def about(self,parsed,message):
         """The about command prints simple information about the bot"""
@@ -148,8 +140,13 @@ class CommandManager:
                     "**Open Propositions**\n"\
                     "TBD\n"\
                     "**Total Propositions**\n"\
-                    "TBD\n"
-        embed = discord.Embed(type="rich",color=discord.Color.blue(),description=about_info,title="Direct Discord Democracy")
+                    "TBD\n"\
+                    "**This server's quorum**\n"\
+                    "%d%%\n"\
+                    "**This server's delay**\n"\
+                    "%s\n"
+        serverData = await self.serverWrapper.getServerData(message.server)
+        embed = discord.Embed(type="rich",color=discord.Color.blue(),description=about_info % (serverData['quorum']*100,utils.fffromSeconds(serverData['delay'])),title="Direct Discord Democracy")
         await self.client.send_message(message.channel,embed=embed)
     
     async def help(self,parsed,message):
@@ -161,8 +158,8 @@ class CommandManager:
         elif parsed.helpCommand == "add":
             helpMessage = "%s\n%s" % (self.addParser.format_help(),helpMessages.genAddHelp(message.server))
         #NOTE: the remove command has been removed (hahaha)
-        elif parsed.helpCommand == "status":
-            helpMessage = "%s\n%s" % (self.topSubparser_status.format_help(),helpMessages.statusHelp)
+        #NOTE: the status command has been removed
+        #NOTE: Both of these commands required the internalID field, which I decided not to implement
         elif parsed.helpCommand == "admin":
             helpMessage = "%s\n%s" % (self.topSubparser_admin.format_help(),helpMessages.adminHelp)
         elif parsed.helpCommand == "about":

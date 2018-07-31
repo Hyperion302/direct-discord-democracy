@@ -28,6 +28,21 @@ def ffromSeconds(sec):
     """Wraps fromSeconds to return a formatted string"""
     return "%dd%dh%dm" % fromSeconds(sec)
 
+def fffromSeconds(sec):
+    """Provides an extra layer of formatting for fromSeconds"""
+    string = ""
+    time = fromSeconds(sec)
+    if time[0]:
+        string = string + "%d Day%s " % (time[0],'s' if time[0] > 1 else '')
+    if time[1]:
+        string = string + "%d Hour%s " % (time[1],'s' if time[1] > 1 else '')
+    if time[2]:
+        string = string + "%d Minute%s " % (time[2],'s' if time[2] > 1 else '')
+    if string == "":
+        string = "No Time"
+
+    return string
+
 def mentionToId(mention):
     """Converts a mention string to an ID"""
     return mention.replace('<@!','').replace('>','')

@@ -22,7 +22,6 @@ from voteChecker import voteCheckingClient
 
 #TODO: When someone votes, remove their other vote on the same prop (if it exists)
 #TODO: Add time delays for actions (adjustable by admin)
-#TODO: Add other commands such as status/help✓/about
 #TODO: Status logs should De activate their respective props when deleted, and revert when edited. (use on_delete_message and on_edit_message)
 #TODO: Have command messages deleted after ~30s
 #TODO: Split commands.py into commands.py and votes.py
