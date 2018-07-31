@@ -67,11 +67,10 @@ class CommandManager:
         try:
             parsedCommand = self.topParser.parse_args(message.content[4:].split())
         except: # User error
-            #TODO: Implement error handling
             #NOTE: Better error messages (e.g the help messages from the argparse library) aren't possible
             # due to the design of the argparse library not returning those messages in the exception :(
-            await self.logger.error("There was an error in your command.  See `_DDD help` for help.", message.channel)
-            return
+            #await self.logger.error("There was an error in your command.  See `_DDD help` for help.", message.channel)
+            raise errors.UserError(message.content[4:].split(),"There was an error in your command.  See `_DDD help` for help.")
         route = {
             "add": self.add,
             "help": self.help,
@@ -107,9 +106,10 @@ class CommandManager:
         # Pull the params out
         try:
             parsedAdd = self.addParser.parse_args(parsed.parameters)
-        except: #TODO: Implement error handling
-            await self.logger.error("There was an error with the add command's parameters.  Check `_DDD help -c add` for help.", message.channel)
-            return
+        except:
+            raise errors.UserError(parsed.parameters,"There was an error with the add command's parameters.  Check `_DDD help -c add` for help.")
+            #await self.logger.error("There was an error with the add command's parameters.  Check `_DDD help -c add` for help.", message.channel)
+            #return
         # Add the prop to the DB
         # I wish there was a way that wasn't if/else chains...
         propType = parsedAdd.type
@@ -118,9 +118,8 @@ class CommandManager:
             # Check that the target exists
             uid = utils.mentionToId(parsedAdd.target[0])
             if not message.server.get_member(uid):
-                #TODO: Error handling
-                await self.logger.error("Could not find member `%s`." % parsedAdd.target[0],message.channel)
-                return
+                raise errors.UserError(parsedAdd.target[0],"Could not find member `%s`." % parsedAdd.target[0])
+                #await self.logger.error("Could not find member `%s`." % parsedAdd.target[0],message.channel)
     
             # Instantiate action
             propAction = action.DDDAction.KickAction(message,message.author,parsedAdd.target[0])
@@ -128,15 +127,14 @@ class CommandManager:
             # Check that the target exists
             uid = utils.mentionToId(parsedAdd.target[0])
             if not message.server.get_member(uid):
-                #TODO: Error handling
-                await self.logger.error("Could not find member `%s`.  Is the user offline?" % parsedAdd.target[0])
-                return
+                raise errors.UserError(parsedAdd.target[0],"Could not find member `%s`." % parsedAdd.target[0])
+                #await self.logger.error("Could not find member `%s`.  Is the user offline?" % parsedAdd.target[0])
     
             propAction = action.DDDAction.BanAction(message,message.author,parsedAdd.target[0],utils.toSeconds(parsedAdd.duration[0]))
         else:
-            #TODO: Implement error handling
-            await self.logger.error("There was an error with the prop type %s.  Check `_DDD help -c add` for a list of prop types" % propType, message.channel)
-            return
+            raise errors.UserError(propType,"There was an error with the prop type %s.  Check `_DDD help -c add` for a list of prop types" % propType)
+            #await self.logger.error("There was an error with the prop type %s.  Check `_DDD help -c add` for a list of prop types" % propType, message.channel)
+            #return
         # Print status message for prop 
         # NOTE: As the status message id is added to the prop, this must be done before storing the prop
         # If you do not, it default's to the command message
@@ -180,18 +178,17 @@ class CommandManager:
         elif parsed.helpCommand == "about":
             helpMessage = "%s\n%s" % (self.topSubparser_about.format_help(),helpMessages.aboutHelp)
         else:
-            # TODO: Error handling
-            await self.logger.log("Help for command `%s` not found" % parsed.helpCommand, message.channel)
-            return
+            raise errors.UserError(parsed.helpCommand,"Help for command `%s` not found" % parsed.helpCommand)
+            #await self.logger.log("Help for command `%s` not found" % parsed.helpCommand, message.channel)
         await self.logger.log(helpMessage,message.channel)
 
     async def admin(self,parsed,message):
         """An admin command to set server-wide values"""
         # Check to see if the user is an admin
         if not message.author.server_permissions.administrator:
-            #TODO: Error handling
-            await self.logger.error("You have insufficient permissions to execute this command.  You must have the `Administrator` permission to execute this command.",message.channel)
-            return
+            raise errors.UserError(None,"You have insufficient permissions to execute this command.  You must have the `Administrator` permission to execute this command.")
+            #await self.logger.error("You have insufficient permissions to execute this command.  You must have the `Administrator` permission to execute this command.",message.channel)
+
 
         quorum = parsed.quorum
         delay = parsed.delay
@@ -203,21 +200,19 @@ class CommandManager:
             quorum = int(quorum)/100
         
         if (not quorum) and (not delay):
-            #TODO: Error handling
-            await self.logger.error("Please specify a quorum, a delay, or both.  See `_DDD help -c admin` for help",message.channel)
-            return
+            raise errors.UserError(None, "Please specify a quorum, a delay, or both.  See `_DDD help -c admin` for help")
+            #await self.logger.error("Please specify a quorum, a delay, or both.  See `_DDD help -c admin` for help",message.channel)
+
 
         # Check if the quorum is in range
         if quorum and (quorum > 1 or quorum < 0.01):
-            #TODO: Error handling
-            await self.logger.error("There was an error with the admin command's quorum parameter.  See `_DDD help -c admin` for help.", message.channel)
+            raise errors.UserError(quorum, "There was an error with the admin command's quorum parameter.  See `_DDD help -c admin` for help.")
+            #await self.logger.error("There was an error with the admin command's quorum parameter.  See `_DDD help -c admin` for help.", message.channel)
         
         # Execute the update and wait for status
         status = await self.serverWrapper.updateServerData(message.server,quorum,delay)
         if status:
             await self.logger.success("Successfully changed server values",message.channel)
-        else:
-            pass #TODO: Add error handling
 
     async def handleVote(self,user,vote,action,reaction):
         """Handle function that should only be called by handleEmoji"""
@@ -243,6 +238,9 @@ class CommandManager:
         elif vote == 'n':
             action.n = action.n + 1 #NOTE: I don't requery the DB to save time
             await self.db.update_one(action,{'$inc':{'n':1}})
+        else:
+            raise errors.SoftwareError("Error in vote counting")
+
         await self.db.update_one(action,{'$addToSet':{'voters':user.id}}) #TODO: Batch updates?
 
         # Update vote count in message
@@ -260,8 +258,7 @@ class CommandManager:
             action.n = action.n - 1 #NOTE: I don't requery the DB to save time
             await self.db.update_one(action,{'$inc':{'n':-1}})
         else:
-            # TODO: Error handling
-            return
+            raise errors.SoftwareError("Error in vote counting")
 
         # Remove user from voter list
         await self.db.update_one(action,{'$pull':{'voters':user.id}}) #TODO: Batch updates?
@@ -290,8 +287,7 @@ class CommandManager:
         """A special handle to account for when an admin clears ALL reactions from a message.  If not all reactions were cleared, throw an error"""
         # NOTE: Untested.  If the message object was created AFTER the reactions were cleared, check to see if it's reactions queue is empty
         if len(reactions) != len(message.reactions):
-            #TODO: Error handling
-            return
+            raise errors.SoftwareError("Not all reactions cleared from status message during clear operation!")
 
         # Update vote count in DB
         action = await self.db.query_one({'messageId':message.id})

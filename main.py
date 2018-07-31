@@ -9,7 +9,7 @@ from logger import Logger
 from db import DBTable,DBServerWrapper
 from threading import Thread
 from voteChecker import voteCheckingClient
-
+from errors import UserError, DatabaseError, SoftwareError
 # GLOBAL TODO:
 
 #TODO: IMPORTANT! Run cleanMessageDeque in a seperate thread!
@@ -48,7 +48,17 @@ voteCheckClient = voteCheckingClient(mongoclient.ddd.props,sw,log)
 # Event handlers
 @client.event
 async def on_message(message):
-    await cm.handleMessage(message)
+    try:
+        await cm.handleMessage(message)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,message.channel)
 
 @client.event
 async def on_ready():
@@ -66,20 +76,60 @@ async def on_ready():
 
 @client.event
 async def on_reaction_add(reaction,user):
-    await cm.handleEmoji(reaction,user)
+    try:
+        await cm.handleEmoji(reaction,user)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
 
 @client.event
 async def on_reaction_clear(message,reactions):
-    await cm.handleClearedReactions(message,reactions)
     #NOTE: Untested
+    try:
+        await cm.handleClearedReactions(message,reactions)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,message.channel)
 
 @client.event
 async def on_reaction_remove(reaction,user):
-    await cm.handleRemoveEmoji(reaction,user)
+    try:
+        await cm.handleRemoveEmoji(reaction,user)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
 
 @client.event
 async def on_server_join(server):
-    await sw.checkServer(server)
+    try:
+        await sw.checkServer(server)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,server.default_channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,server.default_channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,server.default_channel)
 
 @client.event
 async def on_server_leave(server):
