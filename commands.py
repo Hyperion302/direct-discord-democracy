@@ -89,23 +89,23 @@ class CommandManager:
         """Handles an emoji reaction to a message"""
         e = str(reaction.emoji)
         if e.startswith(('👍','👎')):
-            action = await self.db.query_one({'messageId':reaction.message.id,'active':True})
+            action = await self.db.query_one({'messageId':reaction.message.id})
             if e.startswith('👍'):
-                await self.handleVote(user,'y',action,reaction.message)
+                await self.handleVote(user,'y',action,reaction)
             else:
-                await self.handleVote(user,'n',action,reaction.message)
+                await self.handleVote(user,'n',action,reaction)
         elif e.startswith('❌'):
             action = await self.db.query_one({'messageId':reaction.message.id,'active':True})
-            await self.handleRemoveStatus(user,action,reaction.message)
+            await self.handleRemoveStatus(user,action,reaction.message,reaction)
     async def handleRemoveEmoji(self,reaction,user):
         """Handles an emoji being removed from a message"""
         e = str(reaction.emoji)
         if e.startswith(('👍','👎')):
-            action = await self.db.query_one({'messageId':reaction.message.id,'active':True})
+            action = await self.db.query_one({'messageId':reaction.message.id})
             if e.startswith('👍'):
-                await self.handleRemoveVote(user,'y',action,reaction.message)
+                await self.handleRemoveVote(user,'y',action,reaction)
             else:
-                await self.handleRemoveVote(user,'n',action,reaction.message)
+                await self.handleRemoveVote(user,'n',action,reaction)
 
     async def add(self,parsed,message):
         """The add command adds a proposition, and it's response is the status message"""
@@ -201,18 +201,18 @@ class CommandManager:
         else:
             pass #TODO: Add error handling
 
-    async def handleVote(self,user,vote,action,message):
+    async def handleVote(self,user,vote,action,reaction):
         """Handle function that should only be called by handleEmoji"""
         # TODO: If any time the vote action fails, remove the vote.
         
-        doc = await self.db.query_one({'messageId':action.messageId})
         # Check to make sure the props are active
-        if not doc.active:
-            # TODO: Remove the reaction
+        if not action.active:
+            # Remove the reaction
+            await self.client.remove_reaction(reaction.message,reaction.emoji,user)
             return
 
         # Verify one-time vote
-        voters = doc.voters
+        voters = action.voters
         if user.id in voters:
             # Silent error because not caused by user
             # TODO: Remove the second vote/reaction
@@ -230,9 +230,9 @@ class CommandManager:
         # Update vote count in message
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['status'],description=log_message)
-        await self.client.edit_message(message,embed=embed)
+        await self.client.edit_message(reaction.message,embed=embed)
 
-    async def handleRemoveVote(self,user,vote,action,message):
+    async def handleRemoveVote(self,user,vote,action,reaction):
         """Handle function that should only be called by handleRemoveEmoji"""
         # Update vote count in DB
         if vote == 'y' and action.y > 0:
@@ -245,26 +245,40 @@ class CommandManager:
             # TODO: Error handling
             return
 
-        #NOTE: If user is None, we don't know who to mark off a vote for.  We have to just subtract the vote from the tally
-        # and live with it.  This is a big issue.
-        if user:
-            await self.db.update_one(action,{'$pull':{'voters':user.id}}) #TODO: Batch updates?
-
+        # Remove user from voter list
+        await self.db.update_one(action,{'$pull':{'voters':user.id}}) #TODO: Batch updates?
+            
         # Update vote count in message
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['status'],description=log_message)
-        await self.client.edit_message(message,embed=embed)
+        await self.client.edit_message(reaction.message,embed=embed)
 
-    async def handleRemoveStatus(self,user,action,message):
+    async def handleRemoveStatus(self,user,action,message,reaction):
         """Handle function that should only be called by handleEmoji"""
         if user.id != action.created_by:
-            #TODO: Remove their reaction
+            await self.client.remove_reaction(message,reaction.emoji,user)
             return
         
         # Deactivate action
         action.active = False
         await self.db.update_one(action,{'$set':{'active':False}})
 
+        # Update status message
+        log_message = action.formatAction()
+        embed = discord.Embed(type="rich",color=self.logger.colors['inactive'],description=log_message)
+        await self.client.edit_message(message,embed=embed)
+    
+    async def handleClearedReactions(self,message,reactions):
+        """A special handle to account for when an admin clears ALL reactions from a message.  If not all reactions were cleared, throw an error"""
+        # NOTE: Untested.  If the message object was created AFTER the reactions were cleared, check to see if it's reactions queue is empty
+        if len(reactions) != len(message.reactions):
+            #TODO: Error handling
+            return
+
+        # Update vote count in DB
+        action = await self.db.query_one({'messageId':message.id})
+        await self.db.update_one(action,{'$set':{'y':0,'n':0,'voters':[]}})
+     
         # Update status message
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['inactive'],description=log_message)

@@ -17,13 +17,15 @@ from voteChecker import voteCheckingClient
 
 #TODO: Add a check to make sure the bot's rank is on top of the heiarchy
 
-#TODO: When someone removes their reaction, remove their vote
+#TODO: When performing a client operation that requires elevated permissions, check for permissions.  If 
+# the operation fails, print a permission error and cancel the operation.
+
 #TODO: When someone votes, remove their other vote on the same prop (if it exists)
 #TODO: Add time delays for actions (adjustable by admin)
 #TODO: Add other commands such as status/help✓/about
 #TODO: Status logs should De activate their respective props when deleted, and revert when edited. (use on_delete_message and on_edit_message)
 #TODO: Have command messages deleted after ~30s
-
+#TODO: Split commands.py into commands.py and votes.py
 
 # Load config file
 config = json.loads(open("config.json",'r').read())
@@ -70,10 +72,8 @@ async def on_reaction_add(reaction,user):
 
 @client.event
 async def on_reaction_clear(message,reactions):
-    # NOTE: I do nothing, because the api does not pass me the user who's vote was removed.  Because of this I can not
-    # remove them from the voters list, and if they try to vote again they wouldn't be able to.  An admin (or someone with sufficient permissions)
-    # could clear votes he does not like and those users would not be able to vote again.  This defeats the entire purpose of the bot.
-    pass
+    await cm.handleClearedReactions(message,reactions)
+    #NOTE: Untested
 
 @client.event
 async def on_reaction_remove(reaction,user):
