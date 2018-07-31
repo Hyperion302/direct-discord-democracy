@@ -70,7 +70,7 @@ class CommandManager:
             #TODO: Implement error handling
             #NOTE: Better error messages (e.g the help messages from the argparse library) aren't possible
             # due to the design of the argparse library not returning those messages in the exception :(
-            await self.logger.error("There was an error in your command.  See '_DDD help' for help.", message.channel)
+            await self.logger.error("There was an error in your command.  See `_DDD help` for help.", message.channel)
             return
         route = {
             "add": self.add,
@@ -108,7 +108,7 @@ class CommandManager:
         try:
             parsedAdd = self.addParser.parse_args(parsed.parameters)
         except: #TODO: Implement error handling
-            await self.logger.error("There was an error with the add command's parameters.  Check '_DDD help -c add' for help.", message.channel)
+            await self.logger.error("There was an error with the add command's parameters.  Check `_DDD help -c add` for help.", message.channel)
             return
         # Add the prop to the DB
         # I wish there was a way that wasn't if/else chains...
@@ -120,7 +120,7 @@ class CommandManager:
             propAction = action.DDDAction.BanAction(message,message.author,parsedAdd.target[0],utils.toSeconds(parsedAdd.duration[0]))
         else:
             #TODO: Implement error handling
-            await self.logger.error("There was an error with the prop type %s.  Check '_DDD help -c add' for a list of prop types" % propType, message.channel)
+            await self.logger.error("There was an error with the prop type %s.  Check `_DDD help -c add` for a list of prop types" % propType, message.channel)
             return
         # Print status message for prop 
         # NOTE: As the status message id is added to the prop, this must be done before storing the prop
@@ -166,7 +166,7 @@ class CommandManager:
             helpMessage = "%s\n%s" % (self.topSubparser_about.format_help(),helpMessages.aboutHelp)
         else:
             # TODO: Error handling
-            await self.logger.log("Help for command %s not found" % parsed.helpCommand, message.channel)
+            await self.logger.log("Help for command `%s` not found" % parsed.helpCommand, message.channel)
             return
         await self.logger.log(helpMessage,message.channel)
 
@@ -175,7 +175,7 @@ class CommandManager:
         # Check to see if the user is an admin
         if not message.author.server_permissions.administrator:
             #TODO: Error handling
-            await self.logger.error("You have insufficient permissions to execute this command.  You must have the ```Administrator``` permission to execute this command.",message.channel)
+            await self.logger.error("You have insufficient permissions to execute this command.  You must have the `Administrator` permission to execute this command.",message.channel)
             return
 
         quorum = parsed.quorum
@@ -189,13 +189,13 @@ class CommandManager:
         
         if (not quorum) and (not delay):
             #TODO: Error handling
-            await self.logger.error("Please specify a quorum, a delay, or both.  See '_DDD help -c admin' for help",message.channel)
+            await self.logger.error("Please specify a quorum, a delay, or both.  See `_DDD help -c admin` for help",message.channel)
             return
 
         # Check if the quorum is in range
         if quorum and (quorum > 1 or quorum < 0.01):
             #TODO: Error handling
-            await self.logger.error("There was an error with the admin command's quorum parameter.  See '_DDD help -c admin' for help.", message.channel)
+            await self.logger.error("There was an error with the admin command's quorum parameter.  See `_DDD help -c admin` for help.", message.channel)
         
         # Execute the update and wait for status
         status = await self.serverWrapper.updateServerData(message.server,quorum,delay)
