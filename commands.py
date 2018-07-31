@@ -177,7 +177,8 @@ class CommandManager:
         """An admin command to set server-wide values"""
         # Check to see if the user is an admin
         if not message.author.server_permissions.administrator:
-            await self.logger.error("You have insufficient permissions to execute this command",message.channel)
+            #TODO: Error handling
+            await self.logger.error("You have insufficient permissions to execute this command.  You must have the ```Administrator``` permission to execute this command.",message.channel)
             return
 
         quorum = parsed.quorum
@@ -188,11 +189,16 @@ class CommandManager:
             delay = utils.toSeconds(delay)
         if quorum:
             quorum = int(quorum)/100
+        
+        if (not quorum) and (not delay):
+            #TODO: Error handling
+            await self.logger.error("Please specify a quorum, a delay, or both.  See '_DDD help -c admin' for help",message.channel)
+            return
 
         # Check if the quorum is in range
         if quorum and (quorum > 1 or quorum < 0.01):
             #TODO: Error handling
-            await self.logger.error("There was an error with the admin command's quorum parameter.  Check '_DDD help -c admin' for help.", message.channel)
+            await self.logger.error("There was an error with the admin command's quorum parameter.  See '_DDD help -c admin' for help.", message.channel)
         
         # Execute the update and wait for status
         status = await self.serverWrapper.updateServerData(message.server,quorum,delay)
