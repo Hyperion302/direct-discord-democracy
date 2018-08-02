@@ -128,6 +128,7 @@ async def on_reaction_remove(reaction,user):
 async def on_server_join(server):
     try:
         await sw.checkServer(server)
+        await log.success("Thanks for adding the Direct Discord Democracy bot to your server!\nUse the command `_DDD help` to get started",server.default_channel)
     except UserError as e:
         print(e)
         await log.error(e.message,server.default_channel)
@@ -140,10 +141,6 @@ async def on_server_join(server):
     except Exception as e:
         print(e)
         await log.error(str(e),server.default_channel)
-
-@client.event
-async def on_server_leave(server):
-    pass #TODO: Purge server from server DB
 
 @client.event
 async def on_message_delete(message):

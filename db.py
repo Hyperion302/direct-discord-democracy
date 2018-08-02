@@ -104,5 +104,3 @@ class DBServerWrapper:
             if (not status.modified_count) or (status.modified_count == 0):
                 raise errors.DatabaseError(query,"Could not find any servers to update that matched the ID %s." % server.id)
         return (quorum,delay)
-    
-
