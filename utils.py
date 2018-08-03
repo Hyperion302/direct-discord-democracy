@@ -1,5 +1,5 @@
 import re,math,asyncio
-
+import errors
 def toSeconds(ts):
     """Converts a time string in format DD:HH:MM into into seconds"""
     #TODO: Protect string from matching large numbers like 29h
@@ -56,3 +56,12 @@ def checkHierarchy(server,member):
         above = [role for role in roles if member.top_role < role]
         below = [role for role in roles if member.top_role > role]
         return (above,below)
+
+def checkPermission(channel,permission):
+        """Returns true if a permission exists, raises a permission error if not"""
+        member = channel.server.me
+        perms = channel.permissions_for(member)
+        if perms.__dict__.has_key(permission):
+            if perms.__dict__[permission]: 
+                return True
+            raise errors.PermissionError(permission,channel)

@@ -234,6 +234,7 @@ class CommandManager:
         # Check to make sure the props are active
         if not action.active:
             # Remove the reaction
+            # TODO: Permissions
             await self.client.remove_reaction(reaction.message,reaction.emoji,user)
             return
 
@@ -259,6 +260,7 @@ class CommandManager:
         # Update vote count in message
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['status'],description=log_message)
+        #NOTE: This permission does not exist, as you can always edit your own message
         await self.client.edit_message(reaction.message,embed=embed)
 
     async def handleRemoveVote(self,user,vote,action,reaction):
@@ -279,11 +281,13 @@ class CommandManager:
         # Update vote count in message
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['status'],description=log_message)
+        #NOTE: This permission does not exist, as you can always edit your own message
         await self.client.edit_message(reaction.message,embed=embed)
 
     async def handleRemoveStatus(self,user,action,message,reaction):
         """Handle function that should only be called by handleEmoji"""
         if user.id != action.created_by:
+            #TODO: Permissions
             await self.client.remove_reaction(message,reaction.emoji,user)
             return
         
@@ -294,6 +298,7 @@ class CommandManager:
         # Update status message
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['inactive'],description=log_message)
+        #NOTE: This permission does not exist, as you can always edit your own message
         await self.client.edit_message(message,embed=embed)
     
     async def handleClearedReactions(self,message,reactions):
@@ -309,4 +314,5 @@ class CommandManager:
         # Update status message
         log_message = action.formatAction()
         embed = discord.Embed(type="rich",color=self.logger.colors['inactive'],description=log_message)
+        #NOTE: This permission does not exist, as you can always edit your own message
         await self.client.edit_message(message,embed=embed)

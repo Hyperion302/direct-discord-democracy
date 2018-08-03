@@ -15,11 +15,6 @@ import utils
 
 #TODO: IMPORTANT! Run cleanMessageDeque in a seperate thread!
 
-#TODO: Add a check to make sure the bot's rank is on top of the heiarchy
-
-#TODO: When performing a client operation that requires elevated permissions, check for permissions.  If 
-# the operation fails, print a permission error and cancel the operation.
-
 #TODO: Have command messages deleted after ~30s
 #TODO: Split commands.py into commands.py and votes.py
 

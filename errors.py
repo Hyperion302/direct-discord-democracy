@@ -15,3 +15,9 @@ class SoftwareError(Exception):
 	def __init__(self, message):
 		super().__init__(message)
 		self.message = message
+
+class PermissionError(Exception):
+	def __init__(self, permission, channel):
+		super().__init__("Permission `%s` missing" % permission)
+		self.permission = permission
+		self.channel = channel

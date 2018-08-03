@@ -61,6 +61,7 @@ class voteCheckingClient(discord.Client):
                 status_message = self.get_message(channel,action.messageId)
                 log_message = action.formatAction()
                 embed = discord.Embed(type="rich",color=self.logger.colors['inactive'],description=log_message)
+                #NOTE: This permission does not exist, as you can always edit your own message
                 await self.client.edit_message(status_message,embed=embed)
                 print("\n")
             executionTime = (asyncio.get_event_loop().time())-startTime

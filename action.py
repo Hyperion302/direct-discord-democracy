@@ -1,4 +1,4 @@
-import datetime,utils,logger,asyncio
+import datetime,utils,logger,asyncio,errors
 class DDDAction:
     """Base class for actions"""
     def __init__(self,data):
@@ -89,10 +89,18 @@ class DDDAction:
         if self.type == "kick":
             target = server.get_member(utils.mentionToId(self.target))
             #await logger.success("Kicking %s" % self.target)
-            await client.kick(target) #TODO: Error handling
+
+            # Retrieve channel from action
+            channel = server.get_channel(self.channelId)
+
+            utils.checkPermission(channel,"kick_members")
+            await client.kick(target)
+
         elif self.type == "ban":
             target = server.get_member(utils.mentionToId(self.target))
             #await logger.success("Banning %s" % self.target)
-            await client.ban(target,delete_message_days=0) #TODO: Error handling
+            utils.checkPermission(channel,"kick_members")
+            await client.ban(target,delete_message_days=0)
+
         else:
             raise NotImplementedError
