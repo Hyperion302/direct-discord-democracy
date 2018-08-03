@@ -1,203 +1,236 @@
-import discord
 import asyncio
+import discord
 import json
-import pymongo,bson
+import pymongo,bson,sys,datetime,pickle
+from collections import deque
+# Custom modules
+from commands import CommandManager
+from logger import Logger
+from db import DBTable,DBServerWrapper
+from threading import Thread
+from voteChecker import voteCheckingClient
+from errors import UserError, DatabaseError, SoftwareError
+import utils
+# GLOBAL TODO:
 
+#TODO: IMPORTANT! Run cleanMessageDeque in a seperate thread!
 
-#TODO: Add actual error messages
+#TODO: Have command messages deleted after ~30s
+#TODO: Split commands.py into commands.py and votes.py
 
-commands = ['add','remove','list','find','status','vote','about','help']
-actions = ['kick','ban']
-action_storage = {
-		"kick" : lambda params,message : {
-			"author":message.author.id,
-			"action":params[0],
-			"target":params[1],
-			"name":params[2],
-			"long_name":params[3],
-			"votes":1,
-			"voters":[message.author.id],
-			"server":message.server.id,
-			"active":True,
-			"threshold":0.75
-			},
-		"ban" : lambda params,message : {
-			"author":message.author.id,
-			"action":params[1],
-			"target":params[1],
-			"duration":params[2],
-			"name":params[3],
-			"long_name":params[4],
-			"votes":1,
-			"voters":[message.author.id],
-			"server":message.server.id,
-			"active":True,
-			"threshold":1
-			}
-		}
-
-action_output_templates = {
-		"kick" : lambda doc,server : (
-			"Action: {0}\n"
-			"Name: {1}\n"
-			"Description: {2}\n"
-			"ID: {3}\n"
-			"Author: {4}\n"
-			"Target: {5}\n"
-			"Votes: {6}/{7}\n").format(
-			doc['action'],
-			doc['name'],
-			doc['long_name'],
-			str(doc['_id']),
-			sderef_name(server,doc['author']),
-			sderef_name(server,doc['target']),
-			doc['votes'],
-			round(doc['threshold']*server.member_count)),
-		"ban" : lambda doc,server : (
-			"Action: {0}\n"
-			"Name: {1}\n"
-			"Description: {2}\n"
-			"ID: {3}\n"
-			"Author: {4}\n"
-			"Target: {5}\n"
-			"Duration: {6}\n"
-			"Votes: {7}/{8}\n").format(
-			doc['action'],
-			doc['name'],
-			doc['long_name'],
-			str(doc['_id']),
-			sderef_name(server,doc['author']),
-			sderef_name(server,doc['target']),
-			doc['duration'],
-			doc['votes'],
-			round(doc['threshold']*server.member_count))
-		}
-			
-
-
+# Load config file
 config = json.loads(open("config.json",'r').read())
 
+# Setup discord client
 client = discord.Client()
+
+
+# Setup DB
 mongoclient = pymongo.MongoClient(config['db_srv'])
-db = mongoclient.ddd
 
-async def fmessage(channel,content): #TODO: Handle 2000+ chars by breaking up input string
-	padding = '='*round((len(content)-5)/2)
-	#await client.send_message(channel,"\n```ini\n{0}[DDD]{0}\n{1}\n```".format(padding,content))
-	await client.send_message(channel,"```%s```" % (content))	
+# Instantiate classes
+db = DBTable(mongoclient.ddd.props)
+sw = DBServerWrapper(mongoclient.ddd.servers)
+log = Logger(client)
+cm = CommandManager(client,log,db,sw)
 
+# Because we offer minute precision on delays, I must run a seperate client every minute to
+# update vote counts and execute actions
+voteCheckClient = voteCheckingClient(mongoclient.ddd.props,sw,log)
 
-def sderef_name(server,uid):
-	mem = server.get_member(uid)
-	if not mem:
-		return "Unknown"
-	else:
-		return mem.name
-
-async def deref_name(server,uid): #TODO: Do I need this to be ASYNC?
-	mem = server.get_member(uid)
-	if not mem:
-		return "Unknown"
-	else:
-		return mem.name
-
-async def execute_action(channel,action_doc):
-	action = action_doc['action']
-	target = None
-	if action_doc['target']:
-		target = channel.server.get_member(action_doc['target'])
-	if action == kick:
-		client.kick(target)
-	else:
-		pass
+# Event handlers
+@client.event
+async def on_message(message):
+    try:
+        await cm.handleMessage(message)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except Exception as e:
+        print(e)
+        await log.error(str(e),message.channel)
 
 @client.event
 async def on_ready():
-	print("Logged in as %s" % (client.user.name))
+    print("Booting up...")
+    print("Logged in as %s" % (client.user.name))
+    print("Loading old messages from messageBackup.bin")
+    try:
+        backupFile = open('messageBackup.bin','rb')
+        client.messages.clear()
+        client.messages.extend(pickle.load(backupFile))
+        backupFile.close()
+        print("Loaded %d old messages into messages deque" % len(client.messages))
+    except Exception as e:
+        print("Error loading from backup: %s" % str(e))
 
 @client.event
-async def on_message(message):
-	if len(message.content) > 0 and message.content[0] == '.':
-		command_string = message.content[1:].lower()
-		if command_string.split(' ')[0] in commands:
-			command = command_string.split(' ')[0]
-			await call_command(command,command_string,message)
+async def on_reaction_add(reaction,user):
+    try:
+        await cm.handleEmoji(reaction,user)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except Exception as e:
+        print(e)
+        await log.error(str(e),reaction.message.channel)
+@client.event
+async def on_reaction_clear(message,reactions):
+    #NOTE: Untested
+    try:
+        await cm.handleClearedReactions(message,reactions)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except Exception as e:
+        print(e)
+        await log.error(str(e),message.channel)
+@client.event
+async def on_reaction_remove(reaction,user):
+    try:
+        await cm.handleRemoveEmoji(reaction,user)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,reaction.message.channel)
+    except Exception as e:
+        print(e)
+        await log.error(str(e),reaction.message.channel)
+@client.event
+async def on_server_join(server):
+    try:
+        await sw.checkServer(server)
+        await log.success("Thanks for adding the Direct Discord Democracy bot to your server!\nUse the command `_DDD help` to get started",server.default_channel)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,server.default_channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,server.default_channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,server.default_channel)
+    except Exception as e:
+        print(e)
+        await log.error(str(e),server.default_channel)
 
-async def call_command(command,command_string,message):
-	# Split input by spaces, pull off command, stick back together, and add split by ':'
-	user_params = ' '.join(command_string.split(' ')[1:]).split(':')
-	if command == 'add':
-		if user_params[0] not in actions: return
-		docID = db.props.insert_one(action_storage[user_params[0]](user_params,message)).inserted_id	
-		await fmessage(message.channel,'Successfully added proposition #%s' % (str(docID)))
-	elif command == 'remove':
-		pass
-	elif command == 'list':
-		# 1. Queres for docs that are active + in this server
-		# 2. Looks up it's template lambda according to it's action
-		# 3. Joins up the strings
-		# string = "--\n".join([action_output_templates[doc['action']](doc,message.server) for doc in db.props.find({"active":True,"server":message.server.id})])
-		# New: Simple output
-		string = "--\n".join([(
-				"Action: {0}\n"
-				"Author: {1}\n"
-				"Name: {2}\n"
-				"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in db.props.find({"active":True,"server":message.server.id})])
-		if(len(string) >= 2000):
-			await fmessage(message.channel,"Too many entries. You could try .find?")
-		else:
-			await fmessage(message.channel,string)
-	elif command == 'status':
-		# Print out verbose information
+@client.event
+async def on_message_delete(message):
+    try:
+        await cm.handleMessageDelete(message)
+    except UserError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except SoftwareError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except DatabaseError as e:
+        print(e)
+        await log.error(e.message,message.channel)
+    except Exception as e:
+        print(e)
+        await log.error(str(e),message.channel)
 
-		doc = db.props.find_one({"_id":bson.objectid.ObjectId(user_params[0])}) #TODO: Query by name, not ID
-		await fmessage(message.channel,action_output_templates[doc['action']](doc,message.server))
-	elif command == 'vote':
-		# 1. Update vote count
-		# 2. Add voter to list
-		# 3. Check vote threshold
-		
-		# Pymongo requires objID fields to be objectID objects.
-		obj_id = bson.objectid.ObjectId(user_params[0])
-		doc = db.props.find_one({"_id":obj_id}) #TODO: Query by name, not ID
-		# Save doc_id for next query
-		doc_id = doc['_id']
-		# Check to make sure user hasn't already voted
-		if message.author.id not in doc['voters']:
-			db.props.update_one({"_id":obj_id},{
-				"$inc":{"votes":1},
-				"$addToSet":{"voters":message.author.id}
-			})
-			await fmessage(message.channel,"Thanks for voting")
-		else:
-			await fmessage(message.channel,"You already voted!")
-		# Check vote threshold
-		doc = db.props.find_one({"_id":doc_id})
-		if doc['votes'] >= doc['threshold'] * message.channel.server.member_count:
-			await execute_action(message.channel,doc)
-	elif command == 'help':
-		pass
-	elif command == 'about':
-		pass
-	elif command == 'find':
-		# Query DB for docs of a specific name
-
-		docs = db.props.find({"name":{'$regex': user_params[0]}})
-		
-		string = "--\n".join([(
-				"Action: {0}\n"
-				"Author: {1}\n"
-				"Name: {2}\n"
-				"ID: {3}\n").format(doc['action'],await deref_name(message.channel.server,doc['author']),doc['name'],doc['_id']) for doc in docs])	
-		if(len(string) >= 2000):
-			await fmessage(message.channel,"Too many entries for %s. Try narrowing your search" % user_params[0])
-		else:
-			await fmessage(message.channel,string)
-	else:
-		pass
-
-print("Starting DDD with:\nToken: %s\nSrv: %s" % (config['token'],config['db_srv']))
-
-client.run(config['token'])
+# Oh Boi.  DiscordPY stores all messages that it receives in a deque.  
+# This deque is stored in memory and has a default cap of 5000 messages.
+# When the bot (process) shutsdown, this deque is cleared, and the bot looses all ability to
+# reference any messages that were in it.  The worst part is that the on_reaction_add event is ONLY TRIGGERED
+# FOR MESSAGES ON THE DEQUE.  My current solution consists of going through the entire deque regularily and cleaning it of
+# non-prop messages.  When it does hit a prop message, it stores it in a new table on the DB where it will be backed up.
+# If the bot has a crash/shutdown/update, the props will be restored in the deque when the bot starts back up.
+# Luckily the deque and the client object are mutable, which means I can pass the client class into both the store loop and start it's task
+# in the event loop.  As long as I use non-assignment operators in storeLoop, the changes I make to the deque should carry over.
+async def cleanDequeLoop(client): #TODO: Prevent drifing by accounting for how long execution took
+    while True:
+        print("Cleaning deque...")
+        print("Current length: %d\nCurrent Size: %d" % (len(client.messages),sys.getsizeof(client.messages)))
+        startTime = asyncio.get_event_loop().time()
+        # This small bit loops over all elements and pulls out the status messages
+        # Find the ids of the prop messages
+        ids = [d['messageId'] for d in mongoclient.ddd.props.find({'active':True})]
+        #Temporary destination deque
+        temp = deque()
+        # Loop over all messages and append any matching ones to the temp deque
+        for a in range(len(client.messages)):
+            if client.messages[0].id in ids:
+                temp.append(client.messages[0])
+            else:
+                print("Removing message with content: %s" % client.messages[0].content)
+            client.messages.rotate(-1)
+        # Clear the messages deque
+        client.messages.clear()
+        # Fill it in with the temporary deque (Prop messages)
+        client.messages.extend(temp)
+        # Empty temp deque
+        del temp
+        executionTime = (asyncio.get_event_loop().time())-startTime
+        print("Finished cleaning deque! It took %d seconds" % int(executionTime))
+        print("New length: %d\nNew Size: %d" % (len(client.messages),sys.getsizeof(client.messages)))
+        await asyncio.sleep(120-executionTime) #Prevent drifting
 
 
+#client.run(config['bot_token'])
+
+loop = asyncio.get_event_loop()
+try:
+    loop.run_until_complete(asyncio.gather(
+                            client.start(config['bot_token']),
+                            cleanDequeLoop(client),
+                            voteCheckClient.start(config['bot_token'])))
+except KeyboardInterrupt:
+    loop.run_until_complete(client.logout())
+    loop.run_until_complete(voteCheckClient.logout())
+    print("Backing up messages in messageBackup.bin")
+    try:
+        backupFile = open("messageBackup.bin",'wb')
+        pickle.dump(client.messages,backupFile)
+        print("Finished backing up messages")
+    except Exception as e:
+        print("Error writing backup: %s" % str(e))
+except SystemExit:
+    loop.run_until_complete(client.logout())
+    loop.run_until_complete(voteCheckClient.logout())
+    print("Backing up messages in messageBackup.bin")
+    try:
+        backupFile = open("messageBackup.bin",'wb')
+        pickle.dump(client.messages,backupFile)
+        print("Finished backing up messages")
+    except Exception as e:
+        print("Error writing backup: %s" % str(e))
+except Exception as e:
+    loop.run_until_complete(client.logout())
+    loop.run_until_complete(voteCheckClient.logout())
+    print("Backing up messages in messageBackup.bin")
+    try:
+        backupFile = open("messageBackup.bin",'wb')
+        pickle.dump(client.messages,backupFile)
+        print("Finished backing up messages")
+    except Exception as e:
+        print("Error writing backup: %s" % str(e))
+    # After backing up messages, re-raise the error
+    raise e
+finally:
+    loop.close()

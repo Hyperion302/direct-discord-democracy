@@ -2,9 +2,16 @@
 config.json
 
 # ENV stuff
-bin/
-share/
-lib/
+env/
+.Python
+__pycache__
+
+# VSCode
+.vscode/
 
 # pip
 pip-selfcheck.json
+
+# Temporary and machine specific files
+messageBackup.bin
+testDeques.py
